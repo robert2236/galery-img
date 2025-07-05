@@ -1,7 +1,9 @@
-import styled from "styled-components";
+import styled from "styled-components";7
+import { Header } from "../components/Header";
 export function Estadisticas() {
   return (
     <Container>
+      <Header/>
       <h1>Estadistica</h1>
     </Container>
   );

@@ -2,7 +2,6 @@ import styled from "styled-components";
 import logo from "../assets/react.svg";
 import { v } from "../styles/Variables";
 import {
-  AiOutlineLeft,
   AiOutlineHome,
   AiOutlineApartment,
   AiOutlineSetting,
@@ -11,75 +10,14 @@ import { MdOutlineAnalytics, MdLogout } from "react-icons/md";
 import { NavLink } from "react-router-dom";
 import { useContext } from "react";
 import { ThemeContext } from "../App";
-export function Sidebar({ sidebarOpen, setSidebarOpen }) {
-  const ModSidebaropen = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
+
+export function Sidebar() {
   const { setTheme, theme } = useContext(ThemeContext);
   const CambiarTheme = () => {
     setTheme((theme) => (theme === "light" ? "dark" : "light"));
   };
 
-  return (
-    <Container isOpen={sidebarOpen} themeUse={theme}>
-      <button className="Sidebarbutton" onClick={ModSidebaropen}>
-        <AiOutlineLeft />
-      </button>
-      <div className="Logocontent">
-        <div className="imgcontent">
-          <img src={logo} />
-        </div>
-        <h2>codigo369</h2>
-      </div>
-      {linksArray.map(({ icon, label, to }) => (
-        <div className="LinkContainer" key={label}>
-          <NavLink
-            to={to}
-            className={({ isActive }) => `Links${isActive ? ` active` : ``}`}
-          >
-            <div className="Linkicon">{icon}</div>
-            {sidebarOpen && <span>{label}</span>}
-          </NavLink>
-        </div>
-      ))}
-      <Divider />
-      {secondarylinksArray.map(({ icon, label, to }) => (
-        <div className="LinkContainer" key={label}>
-          <NavLink
-            to={to}
-            className={({ isActive }) => `Links${isActive ? ` active` : ``}`}
-          >
-            <div className="Linkicon">{icon}</div>
-            {sidebarOpen && <span>{label}</span>}
-          </NavLink>
-        </div>
-      ))}
-      <Divider />
-      <div className="Themecontent">
-        {sidebarOpen && <span className="titletheme">Dark mode</span>}
-        <div className="Togglecontent">
-          <div className="grid theme-container">
-            <div className="content">
-              <div className="demo">
-                <label className="switch" istheme={theme}>
-                  <input
-                    istheme={theme}
-                    type="checkbox"
-                    className="theme-swither"
-                    onClick={CambiarTheme}
-                  ></input>
-                  <span istheme={theme} className="slider round"></span>
-                </label>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Container>
-  );
-}
-//#region Data links
-const linksArray = [
+  const linksArray = [
   {
     label: "Home",
     icon: <AiOutlineHome />,
@@ -101,11 +39,12 @@ const linksArray = [
     to: "/diagramas",
   },
   {
-    label: "Reportes",
+    label: "Perfil",
     icon: <MdOutlineAnalytics />,
     to: "/reportes",
   },
 ];
+
 const secondarylinksArray = [
   {
     label: "Configuración",
@@ -118,81 +57,171 @@ const secondarylinksArray = [
     to: "/null",
   },
 ];
-//#endregion
 
-//#region STYLED COMPONENTS
+  return (
+    <Container themeUse={theme}>
+      <SidebarContent>
+        <div className="Logocontent">
+          <div className="imgcontent">
+            <img src={logo} alt="Logo" />
+          </div>
+        </div>
+        
+        {linksArray.map(({ icon, label, to }) => (
+          <div className="LinkContainer" key={label}>
+            <NavLink
+              to={to}
+              className={({ isActive }) => `Links${isActive ? ` active` : ``}`}
+            >
+              <div className="Linkicon" data-tooltip={label}>
+                {icon}
+              </div>
+            </NavLink>
+          </div>
+        ))}
+        
+        <Divider />
+        
+        {secondarylinksArray.map(({ icon, label, to }) => (
+          <div className="LinkContainer" key={label}>
+            <NavLink
+              to={to}
+              className={({ isActive }) => `Links${isActive ? ` active` : ``}`}
+            >
+              <div className="Linkicon" data-tooltip={label}>
+                {icon}
+              </div>
+            </NavLink>
+          </div>
+        ))}
+        
+        <Divider />
+        
+        <div className="Themecontent">
+          <div className="Togglecontent" data-tooltip="Modo nocturno">
+            <div className="grid theme-container">
+              <div className="content">
+                <div className="demo">
+                  <label className="switch" istheme={theme}>
+                    <input
+                      istheme={theme}
+                      type="checkbox"
+                      className="theme-swither"
+                      onClick={CambiarTheme}
+                    />
+                    <span istheme={theme} className="slider round"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </SidebarContent>
+    </Container>
+  );
+}
+
+// Estilos actualizados
 const Container = styled.div`
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  z-index: 1000;
+`;
+
+const SidebarContent = styled.div`
   color: ${(props) => props.theme.text};
   background: ${(props) => props.theme.bg};
-  position: sticky;
+  width: 90px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   padding-top: 20px;
-  .Sidebarbutton {
-    position: absolute;
-    top: ${v.xxlSpacing};
-    right: -18px;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: ${(props) => props.theme.bgtgderecha};
-    box-shadow: 0 0 4px ${(props) => props.theme.bg3},
-      0 0 7px ${(props) => props.theme.bg};
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.3s;
-    transform: ${({ isOpen }) => (isOpen ? `initial` : `rotate(180deg)`)};
-    border: none;
-    letter-spacing: inherit;
-    color: inherit;
-    font-size: inherit;
-    text-align: inherit;
-    padding: 0;
-    font-family: inherit;
-    outline: none;
+  overflow-y: auto;
+  
+  /* Estilo de scroll personalizado */
+  &::-webkit-scrollbar {
+    width: 4px;
   }
+  
+  &::-webkit-scrollbar-thumb {
+    background: ${(props) => props.theme.bg3};
+    border-radius: 4px;
+  }
+  
   .Logocontent {
     display: flex;
     justify-content: center;
     align-items: center;
-
     padding-bottom: ${v.lgSpacing};
+    width: 100%;
+    
     .imgcontent {
       display: flex;
+      justify-content: center;
+      width: 100%;
+      
       img {
-        max-width: 100%;
-        height: auto;
+        width: 40px;
+        height: 40px;
+        cursor: pointer;
       }
-      cursor: pointer;
-      transition: all 0.3s;
-      transform: ${({ isOpen }) => (isOpen ? `scale(0.7)` : `scale(1.5)`)};
-    }
-    h2 {
-      display: ${({ isOpen }) => (isOpen ? `block` : `none`)};
     }
   }
+  
   .LinkContainer {
     margin: 8px 0;
-   
-    padding: 0 15%;
-    :hover {
+    width: 100%;
+    
+    &:hover {
       background: ${(props) => props.theme.bg3};
     }
+    
     .Links {
       display: flex;
+      justify-content: center;
       align-items: center;
       text-decoration: none;
-      padding: calc(${v.smSpacing}-2px) 0;
       color: ${(props) => props.theme.text};
-      height:50px;
+      height: 50px;
+      width: 100%;
+      
       .Linkicon {
-        padding: ${v.smSpacing} ${v.mdSpacing};
+        position: relative;
         display: flex;
-
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        
         svg {
-          font-size: 25px;
+          font-size: 24px;
+        }
+        
+        &[data-tooltip] {
+          position: relative;
+          
+          &:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            left: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            background: ${(props) => props.theme.bg3};
+            color: ${(props) => props.theme.text};
+            padding: 6px 12px;
+            border-radius: 4px;
+            white-space: nowrap;
+            z-index: 100;
+            margin-left: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            font-size: 14px;
+            animation: fadeIn 0.2s ease-in-out;
+          }
         }
       }
+      
       &.active {
         .Linkicon {
           svg {
@@ -202,54 +231,56 @@ const Container = styled.div`
       }
     }
   }
+  
   .Themecontent {
+    width: 100%;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    .titletheme {
-      display: block;
-      padding: 10px;
-      font-weight: 700;
-      opacity: ${({ isOpen }) => (isOpen ? `1` : `0`)};
-      transition: all 0.3s;
-      white-space: nowrap;
-      overflow: hidden;
-    }
+    justify-content: center;
+    margin-top: auto;
+    margin-bottom: 20px;
+    
     .Togglecontent {
-      margin: ${({ isOpen }) => (isOpen ? `auto 40px` : `auto 15px`)};
-      width: 36px;
-      height: 20px;
-      border-radius: 10px;
-      transition: all 0.3s;
       position: relative;
+      cursor: pointer;
+      
+      &[data-tooltip]:hover::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        left: 100%;
+        top: 50%;
+        transform: translateY(-50%);
+        background: ${(props) => props.theme.bg3};
+        color: ${(props) => props.theme.text};
+        padding: 6px 12px;
+        border-radius: 4px;
+        white-space: nowrap;
+        z-index: 100;
+        margin-left: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        font-size: 14px;
+        animation: fadeIn 0.2s ease-in-out;
+      }
+      
       .theme-container {
-        background-blend-mode: multiply, multiply;
-        transition: 0.4s;
-        .grid {
-          display: grid;
-          justify-items: center;
-          align-content: center;
-          height: 100vh;
-          width: 100vw;
-          font-family: "Lato", sans-serif;
-        }
         .demo {
-          font-size: 32px;
           .switch {
             position: relative;
             display: inline-block;
             width: 60px;
             height: 34px;
+            
             .theme-swither {
               opacity: 0;
               width: 0;
               height: 0;
+              
               &:checked + .slider:before {
                 left: 4px;
                 content: "🌑";
                 transform: translateX(26px);
               }
             }
+            
             .slider {
               position: absolute;
               cursor: pointer;
@@ -259,8 +290,8 @@ const Container = styled.div`
               bottom: 0;
               background: ${({ themeUse }) =>
                 themeUse === "light" ? v.lightcheckbox : v.checkbox};
-
               transition: 0.4s;
+              
               &::before {
                 position: absolute;
                 content: "☀️";
@@ -271,9 +302,10 @@ const Container = styled.div`
                 line-height: 0px;
                 transition: 0.4s;
               }
+              
               &.round {
                 border-radius: 34px;
-
+                
                 &::before {
                   border-radius: 50%;
                 }
@@ -284,11 +316,16 @@ const Container = styled.div`
       }
     }
   }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px) translateX(0); }
+    to { opacity: 1; transform: translateY(-50%) translateX(0); }
+  }
 `;
+
 const Divider = styled.div`
   height: 1px;
-  width: 100%;
+  width: 80%;
   background: ${(props) => props.theme.bg3};
   margin: ${v.lgSpacing} 0;
 `;
-//#endregion

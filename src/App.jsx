@@ -1,43 +1,84 @@
-import React, { useState } from "react";
-import reactLogo from "./assets/react.svg";
+import React, { useState, useEffect } from "react";
 import { MyRoutes } from "./routers/routes";
-import styled from "styled-components";
-import { BrowserRouter } from "react-router-dom";
-import { Sidebar } from "./components/Sidebar";
+import { BrowserRouter, useLocation } from "react-router-dom";
 import { Light, Dark } from "./styles/Themes";
 import { ThemeProvider } from "styled-components";
-export const ThemeContext = React.createContext(null);
-function App() {
-  const [theme, setTheme] = useState("light");
-  const themeStyle = theme === "light" ? Light : Dark;
+import { Sidebar } from "./components/Sidebar";
+import { Header } from "./components/Header";
+import styled from "styled-components";
+import './styles/Style.css';
 
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+export const ThemeContext = React.createContext(null);
+
+// Componente Layout para rutas que necesitan sidebar
+const Layout = ({ children, sidebarOpen }) => {
   return (
-    <>
-      <ThemeContext.Provider value={{ setTheme, theme }}>
-        <ThemeProvider theme={themeStyle}>
-          <BrowserRouter>
-            <Container className={sidebarOpen ? "sidebarState active" : ""}>
-              <Sidebar
-                sidebarOpen={sidebarOpen}
-                setSidebarOpen={setSidebarOpen}
-              />
-              <MyRoutes />
-            </Container>
-          </BrowserRouter>
-        </ThemeProvider>
-      </ThemeContext.Provider>
-    </>
+    <AppWrapper>
+      <Sidebar sidebarOpen={sidebarOpen} />
+      <ContentWrapper sidebarOpen={sidebarOpen}>
+        <Header />
+        {children}
+      </ContentWrapper>
+    </AppWrapper>
+  );
+};
+
+function App() {
+  const [theme, setTheme] = useState("dark");
+  const themeStyle = theme === "light" ? Light : Dark;
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  useEffect(() => {
+    document.body.style.color = themeStyle.text;
+    document.body.style.backgroundColor = themeStyle.bgtotal;
+  }, [theme, themeStyle]);
+
+  return (
+    <ThemeContext.Provider value={{ setTheme, theme }}>
+      <ThemeProvider theme={themeStyle}>
+        <BrowserRouter>
+          <RouterContent sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        </BrowserRouter>
+      </ThemeProvider>
+    </ThemeContext.Provider>
   );
 }
-const Container = styled.div`
-  display: grid;
-  grid-template-columns: 90px auto;
+
+// Componente separado para manejar el routing
+const RouterContent = ({ sidebarOpen, setSidebarOpen }) => {
+  const location = useLocation();
+  const isLoginPage = location.pathname.includes("/login");
+
+  return (
+    <>
+      {isLoginPage ? (
+        <MyRoutes />
+      ) : (
+        <Layout sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen}>
+          <MyRoutes />
+        </Layout>
+      )}
+    </>
+  );
+};
+
+// Estilos optimizados
+const AppWrapper = styled.div`
+  display: flex;
+  min-height: 100vh;
   background: ${({ theme }) => theme.bgtotal};
-  transition:all 0.3s ;
-  &.active {
-    grid-template-columns: 300px auto;
-  }
-  color:${({theme})=>theme.text};
 `;
+
+const ContentWrapper = styled.div`
+  flex: 1;
+  transition: margin-left 0.3s;
+  margin-left: 80px;
+  padding: 20px;
+  min-width: 0; // Fix para flexbox
+
+  @media (max-width: 768px) {
+    margin-left: 0;
+  }
+`;
+
 export default App;

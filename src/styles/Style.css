@@ -1,0 +1,101 @@
+/****login ******/
+
+.login {
+  backdrop-filter: blur(10px) !important;
+  background-color: hsla(0, 0%, 100%, 0.13) !important;
+  border: 2px solid hsla(0, 0%, 100%, 0.1) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 0 40px rgba(8, 7, 16, 0.6) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: var(--gap) !important;
+  margin: 2rem 0 !important;
+  padding: 50px 35px !important;
+  position: relative !important;
+  z-index: 3 !important;
+}
+
+.btn {
+  border-radius: 10px !important;
+  background-color: #fff !important;
+  padding: 8px !important;
+  font-size: 1.4rem !important;
+  color: #727272 !important;
+}
+
+.custom-input {
+  background-color: #37373e !important;
+  border-radius: 5px;
+  padding: 15px 10px 15px 10px;
+  border-color: transparent;
+  font-size: 1.2em;
+  color: #fff;
+}
+
+/* styles.css */
+body.light-mode {
+  background-color: #f8f9fa;
+  color: #212529;
+}
+
+body.dark-mode {
+  background-color: #212529;
+  color: #f8f9fa;
+}
+
+.dark-mode .custom-input {
+  background-color: #343a40;
+  color: white;
+  border-color: #495057;
+}
+
+.light-mode .custom-input {
+  background-color: white;
+  color: #495057;
+  border-color: #ced4da;
+}
+/****Styles Card ******/
+
+.card-images {
+  border-radius: 15px;
+}
+
+.gallery-img {
+  max-width: 100%;
+  height: auto;
+  object-fit: cover; /* Para mantener la relación de aspecto */
+}
+
+/* styles.css */
+.transparent-modal-image {
+  width: 100%;
+  height: 100vh;
+  object-fit: contain;
+  background-color: transparent;
+}
+
+.bar-img {
+  background-color: gray;
+  height: 50vh;
+  width: 2.5rem;
+  margin-right: 15px;
+  border-radius: 10px;
+  padding: 5px;
+}
+
+.profile-icon {
+  border-radius: 50%;
+  height: 45px;
+  width: 45px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.img-profile {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
