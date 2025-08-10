@@ -21,7 +21,7 @@ export function Sidebar() {
   {
     label: "Home",
     icon: <AiOutlineHome />,
-    to: "/",
+    to: "/home",
   },
   {
     label: "Estadisticas",

@@ -5,17 +5,19 @@ import { FaStar, FaRegStar } from "react-icons/fa";
 import { FaDownload, FaShareAlt } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { FaExpand, FaEllipsisH, FaCompress } from "react-icons/fa";
+import axios from "axios"
+
+// Configuración - Cambia esto para usar imágenes locales o del endpoint
+const USE_LOCAL_IMAGES = false; // true para imágenes locales, false para endpoint API
 
 export function Home() {
-  const images = Object.values(
-    import.meta.glob("../images/*.{png,jpg,jpeg,webp,gif}", {
-      eager: true,
-      as: "url",
-    })
-  );
+  // Estado para las imágenes
+  const [images, setImages] = useState([]);
+  const [isLoading, setIsLoading] = useState(!USE_LOCAL_IMAGES); // Solo loading para API
+  const [error, setError] = useState(null);
 
   // Estado para almacenar las calificaciones de cada imagen
-  const [ratings, setRatings] = useState(Array(images.length).fill({ stars: 0, count: 0 }));
+  const [ratings, setRatings] = useState([]);
   const [show, setShow] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [showRating, setShowRating] = useState(false);
@@ -27,6 +29,38 @@ export function Home() {
     startPos: { x: 0, y: 0 },
   });
   const imageRef = useRef(null);
+
+  // Cargar imágenes según la configuración
+  useEffect(() => {
+  if (USE_LOCAL_IMAGES) {
+    // Usar imágenes locales
+    const localImages = Object.values(
+      import.meta.glob("../images/*.{png,jpg,jpeg,webp,gif}", {
+        eager: true,
+        as: "url",
+      })
+    );
+    setImages(localImages);
+    setRatings(Array(localImages.length).fill({ stars: 0, count: 0 }));
+  } else {
+    // Fetch images from API
+    const fetchImages = async () => {
+      try {
+        const response = await axios.get('/api/images'); 
+        const imageUrls = response.data.map(img => img.image_url);
+        setImages(imageUrls);
+        setRatings(Array(response.data.length).fill({ stars: 0, count: 0 }));
+      } catch (err) {
+        setError(err.message);
+        toast.error('Error loading images');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchImages();
+  }
+}, []);
 
   // Resetear el zoom cuando cambia la imagen o se cierra el modal
   useEffect(() => {
@@ -66,32 +100,68 @@ export function Home() {
 
   const handleDownload = async (imageUrl) => {
     try {
-      const response = await fetch(imageUrl);
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `image-${selectedImageIndex + 1}.jpg`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      if (USE_LOCAL_IMAGES) {
+        // Lógica para descarga de imágenes locales
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `image-${selectedImageIndex + 1}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      } else {
+        // Lógica para descarga de imágenes base64
+        const link = document.createElement('a');
+        link.href = imageUrl;
+        link.download = `image-${selectedImageIndex + 1}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
     } catch (error) {
       console.error("Error al descargar:", error);
+      toast.error("Error downloading image");
     }
   };
 
   const handleShare = async (imageUrl) => {
     try {
-      if (navigator.share) {
-        await navigator.share({
-          title: "Mira esta imagen",
-          text: "¡Echa un vistazo a esta imagen!",
-          url: imageUrl,
-        });
+      if (USE_LOCAL_IMAGES) {
+        // Lógica para compartir imágenes locales
+        if (navigator.share) {
+          await navigator.share({
+            title: "Mira esta imagen",
+            text: "¡Echa un vistazo a esta imagen!",
+            url: imageUrl,
+          });
+        } else {
+          await navigator.clipboard.writeText(imageUrl);
+          toast.success("¡Enlace copiado al portapapeles!");
+        }
       } else {
-        await navigator.clipboard.writeText(imageUrl);
-        toast.success("¡Enlace copiado al portapapeles!");
+        // Lógica para compartir imágenes base64
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
+        const file = new File([blob], 'image.jpg', { type: blob.type });
+        
+        if (navigator.share && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: "Mira esta imagen",
+            text: "¡Echa un vistazo a esta imagen!",
+            files: [file],
+          });
+        } else {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const base64 = e.target.result;
+            navigator.clipboard.writeText(base64);
+            toast.success("¡Imagen copiada al portapapeles como base64!");
+          };
+          reader.readAsDataURL(blob);
+        }
       }
     } catch (error) {
       console.error("Error al compartir:", error);
@@ -193,6 +263,18 @@ export function Home() {
     }));
   };
 
+  if (!USE_LOCAL_IMAGES && isLoading) {
+    return <LoadingContainer>Loading images...</LoadingContainer>;
+  }
+
+  if (!USE_LOCAL_IMAGES && error) {
+    return <ErrorContainer>Error: {error}</ErrorContainer>;
+  }
+
+  if (images.length === 0) {
+    return <EmptyContainer>No images found</EmptyContainer>;
+  }
+
   return (
     <Container className="mt-5">
       <GalleryGrid>
@@ -203,7 +285,7 @@ export function Home() {
               <StarRatingDisplay>
                 <FaStar style={{ color: "#ffc107" }} />
                 <RatingText>
-                  {ratings[index].stars.toFixed(1)} ({ratings[index].count})
+                  {ratings[index]?.stars?.toFixed(1) || '0.0'} ({ratings[index]?.count || 0})
                 </RatingText>
               </StarRatingDisplay>
             </RatingOverlay>
@@ -235,9 +317,9 @@ export function Home() {
                   />
                   {showRating && (
                     <ModalRatingContainer>
-                      <StarRating rating={ratings[index].stars} onRate={(rating) => handleRating(index, rating)} />
+                      <StarRating rating={ratings[index]?.stars || 0} onRate={(rating) => handleRating(index, rating)} />
                       <RatingTextModal>
-                        {ratings[index].stars.toFixed(1)} ({ratings[index].count} ratings)
+                        {ratings[index]?.stars?.toFixed(1) || '0.0'} ({ratings[index]?.count || 0} ratings)
                       </RatingTextModal>
                       <ActionButtons>
                         <ActionButton onClick={() => handleDownload(img)}>
@@ -259,7 +341,33 @@ export function Home() {
   );
 }
 
-// Estilos (los mismos que antes con algunas modificaciones)
+// Additional styled components for loading and error states
+const LoadingContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-size: 1.5rem;
+`;
+
+const ErrorContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-size: 1.5rem;
+  color: red;
+`;
+
+const EmptyContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-size: 1.5rem;
+`;
+
+// Resto de los estilos permanecen igual...
 const Container = styled.div`
   padding: 20px;
   min-height: 100vh;

@@ -7,6 +7,8 @@ import { Sidebar } from "./components/Sidebar";
 import { Header } from "./components/Header";
 import styled from "styled-components";
 import './styles/Style.css';
+import axios from "axios";
+import AuthProvider from "./Auth/Auth"
 
 export const ThemeContext = React.createContext(null);
 
@@ -28,12 +30,26 @@ function App() {
   const themeStyle = theme === "light" ? Light : Dark;
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
+  axios.defaults.baseURL = import.meta.env.VITE_API_URL;
+  
+    axios.interceptors.response.use(
+      response => response,
+      error => {
+        const { response } = error;
+        if (response && response.status === 401) {
+          window.location.href = '/login';
+        }
+        return Promise.reject(error);
+      }
+    );
+
   useEffect(() => {
     document.body.style.color = themeStyle.text;
     document.body.style.backgroundColor = themeStyle.bgtotal;
   }, [theme, themeStyle]);
 
   return (
+    <AuthProvider>
     <ThemeContext.Provider value={{ setTheme, theme }}>
       <ThemeProvider theme={themeStyle}>
         <BrowserRouter>
@@ -41,13 +57,15 @@ function App() {
         </BrowserRouter>
       </ThemeProvider>
     </ThemeContext.Provider>
+    </AuthProvider>
   );
 }
 
 // Componente separado para manejar el routing
 const RouterContent = ({ sidebarOpen, setSidebarOpen }) => {
   const location = useLocation();
-  const isLoginPage = location.pathname.includes("/login");
+  // Cambia esta condición para identificar correctamente la página de login
+  const isLoginPage = location.pathname === "/" || location.pathname === "/login";
 
   return (
     <>
