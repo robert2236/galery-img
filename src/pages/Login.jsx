@@ -128,7 +128,7 @@ const handleLogin = async (data) => {  // Cambia el nombre de handleSubmit a han
                 </div>
               )}
               
-              <div className="d-grid gap-2">
+              <div className="d-grid gap-2 ">
                 <Button 
                   variant={darkMode ? "light" : "primary"} 
                   className="mt-3"

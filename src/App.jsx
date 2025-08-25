@@ -6,9 +6,11 @@ import { ThemeProvider } from "styled-components";
 import { Sidebar } from "./components/Sidebar";
 import { Header } from "./components/Header";
 import styled from "styled-components";
-import './styles/Style.css';
+import "./styles/Style.css";
 import axios from "axios";
-import AuthProvider from "./Auth/Auth"
+import "bootstrap/dist/css/bootstrap.min.css";
+import AuthProvider from "./Auth/Auth";
+import { ToastContainer, toast } from "react-toastify";
 
 export const ThemeContext = React.createContext(null);
 
@@ -31,17 +33,17 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   axios.defaults.baseURL = import.meta.env.VITE_API_URL;
-  
-    axios.interceptors.response.use(
-      response => response,
-      error => {
-        const { response } = error;
-        if (response && response.status === 401) {
-          window.location.href = '/login';
-        }
-        return Promise.reject(error);
+
+  axios.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      const { response } = error;
+      if (response && response.status === 401) {
+        window.location.href = "/login";
       }
-    );
+      return Promise.reject(error);
+    }
+  );
 
   useEffect(() => {
     document.body.style.color = themeStyle.text;
@@ -50,13 +52,28 @@ function App() {
 
   return (
     <AuthProvider>
-    <ThemeContext.Provider value={{ setTheme, theme }}>
-      <ThemeProvider theme={themeStyle}>
-        <BrowserRouter>
-          <RouterContent sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-        </BrowserRouter>
-      </ThemeProvider>
-    </ThemeContext.Provider>
+      <ThemeContext.Provider value={{ setTheme, theme }}>
+        <ThemeProvider theme={themeStyle}>
+          <BrowserRouter>
+            <ToastContainer
+              position="top-center"
+              autoClose={3000}
+              hideProgressBar={false}
+              newestOnTop={false}
+              closeOnClick
+              rtl={false}
+              pauseOnFocusLoss
+              draggable
+              pauseOnHover
+              theme={theme}
+            />
+            <RouterContent
+              sidebarOpen={sidebarOpen}
+              setSidebarOpen={setSidebarOpen}
+            />
+          </BrowserRouter>
+        </ThemeProvider>
+      </ThemeContext.Provider>
     </AuthProvider>
   );
 }
@@ -65,7 +82,8 @@ function App() {
 const RouterContent = ({ sidebarOpen, setSidebarOpen }) => {
   const location = useLocation();
   // Cambia esta condición para identificar correctamente la página de login
-  const isLoginPage = location.pathname === "/" || location.pathname === "/login";
+  const isLoginPage =
+    location.pathname === "/" || location.pathname === "/login";
 
   return (
     <>
@@ -83,20 +101,18 @@ const RouterContent = ({ sidebarOpen, setSidebarOpen }) => {
 // Estilos optimizados
 const AppWrapper = styled.div`
   display: flex;
-  min-height: 100vh;
+  height: auto;
   background: ${({ theme }) => theme.bgtotal};
 `;
 
 const ContentWrapper = styled.div`
   flex: 1;
   transition: margin-left 0.3s;
-  margin-left: 80px;
-  padding: 20px;
+  margin-left: 90px;
   min-width: 0; // Fix para flexbox
+  margin-top: 30px
 
-  @media (max-width: 768px) {
-    margin-left: 0;
-  }
+
 `;
 
 export default App;

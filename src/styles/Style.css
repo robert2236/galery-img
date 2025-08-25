@@ -15,7 +15,7 @@
   z-index: 3 !important;
 }
 
-.btn {
+.btn .login{
   border-radius: 10px !important;
   background-color: #fff !important;
   padding: 8px !important;
@@ -98,4 +98,16 @@ body.dark-mode {
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+.profile {
+  width: 500px;
+  height: 500px;
+  display: flex;
+  justify-content: end;
+
+}
+
+.dropdown-toggle::after {
+  display: none !important;
 }

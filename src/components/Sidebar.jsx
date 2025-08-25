@@ -10,11 +10,18 @@ import { MdOutlineAnalytics, MdLogout } from "react-icons/md";
 import { NavLink } from "react-router-dom";
 import { useContext } from "react";
 import { ThemeContext } from "../App";
+import { useAuth } from '../Auth/Auth';
+import { FaCloudUploadAlt } from "react-icons/fa";
 
 export function Sidebar() {
   const { setTheme, theme } = useContext(ThemeContext);
+  const { close } = useAuth();
   const CambiarTheme = () => {
     setTheme((theme) => (theme === "light" ? "dark" : "light"));
+  };
+
+   const handleLogout = () => {
+    close();
   };
 
   const linksArray = [
@@ -24,9 +31,9 @@ export function Sidebar() {
     to: "/home",
   },
   {
-    label: "Estadisticas",
-    icon: <MdOutlineAnalytics />,
-    to: "/estadisticas",
+    label: "Upload",
+    icon: <FaCloudUploadAlt />,
+    to: "/upload",
   },
   {
     label: "Productos",
@@ -49,14 +56,15 @@ const secondarylinksArray = [
   {
     label: "Configuración",
     icon: <AiOutlineSetting />,
-    to: "/null",
+    to: "/config",
   },
   {
     label: "Salir",
     icon: <MdLogout />,
-    to: "/null",
+    onClick: handleLogout
   },
 ];
+
 
   return (
     <Container themeUse={theme}>
@@ -82,16 +90,30 @@ const secondarylinksArray = [
         
         <Divider />
         
-        {secondarylinksArray.map(({ icon, label, to }) => (
+        {secondarylinksArray.map(({ icon, label, to, onClick }) => (
           <div className="LinkContainer" key={label}>
-            <NavLink
-              to={to}
-              className={({ isActive }) => `Links${isActive ? ` active` : ``}`}
-            >
-              <div className="Linkicon" data-tooltip={label}>
-                {icon}
+            {to ? (
+              // Elemento con enlace
+              <NavLink
+                to={to}
+                className={({ isActive }) => `Links${isActive ? ` active` : ``}`}
+              >
+                <div className="Linkicon" data-tooltip={label}>
+                  {icon}
+                </div>
+              </NavLink>
+            ) : (
+              // Elemento con onClick (como Salir)
+              <div
+                className="Links"
+                onClick={onClick}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="Linkicon" data-tooltip={label}>
+                  {icon}
+                </div>
               </div>
-            </NavLink>
+            )}
           </div>
         ))}
         

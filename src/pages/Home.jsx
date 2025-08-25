@@ -22,6 +22,7 @@ export function Home() {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [showRating, setShowRating] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [profile,setProfile] = useState(false);
   const [zoomState, setZoomState] = useState({
     scale: 1,
     position: { x: 0, y: 0 },
@@ -29,6 +30,7 @@ export function Home() {
     startPos: { x: 0, y: 0 },
   });
   const imageRef = useRef(null);
+
 
   // Cargar imágenes según la configuración
   useEffect(() => {
@@ -276,10 +278,10 @@ export function Home() {
   }
 
   return (
-    <Container className="mt-5">
+    <Container className="mt-3">
       <GalleryGrid>
         {images.map((img, index) => (
-          <GalleryItem key={index} onClick={() => handleShow(index)}>
+          <GalleryItem className="mb-3" key={index} onClick={() => handleShow(index)}>
             <img src={img} alt={`Imagen ${index + 1}`} loading="lazy" />
             <RatingOverlay>
               <StarRatingDisplay>

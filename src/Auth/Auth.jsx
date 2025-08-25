@@ -21,6 +21,14 @@ const AuthProvider = ({ children }) => {
             autoClose: 3000, 
         });
     };
+
+     const close = () => {
+        localStorage.removeItem('authToken');
+        setAuth(false);
+        toast.warning("Haz cerrado sesión", {
+            autoClose: 3000, 
+        });
+    };
     
 
     useEffect(() => {
@@ -49,7 +57,7 @@ const AuthProvider = ({ children }) => {
     };
      
     return (
-        <AuthApi.Provider value={{ auth, login, logout }}>
+        <AuthApi.Provider value={{ auth, login, logout, close }}>
             {children}
         </AuthApi.Provider>
     );

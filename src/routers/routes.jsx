@@ -1,10 +1,11 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Home } from "../pages/Home";
-import { Estadisticas } from "../pages/Estadisticas";
+import { Upload } from "../pages/Upload";
 import { Productos } from "../pages/Productos";
 import { Diagramas } from "../pages/Diagramas";
 import { Reportes } from "../pages/Reportes";
 import { Login } from "../pages/Login";
+import {Config} from "../pages/Config";
 import  {useAuth} from "../Auth/Auth";
 import { useNavigate, Navigate } from 'react-router-dom';
 
@@ -28,9 +29,9 @@ export function MyRoutes() {
         </PrivateRoute>
       } />
       
-      <Route path="/estadisticas" element={
+      <Route path="/upload" element={
         <PrivateRoute>
-          <Estadisticas />
+          <Upload />
         </PrivateRoute>
       } />
       
@@ -49,6 +50,11 @@ export function MyRoutes() {
       <Route path="/home" element={
         <PrivateRoute>
           <Home />
+        </PrivateRoute>
+      } />
+       <Route path="/Config" element={
+        <PrivateRoute>
+          <Config />
         </PrivateRoute>
       } />
     </Routes>

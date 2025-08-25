@@ -1,23 +1,83 @@
-import React from 'react';
-import styled from 'styled-components';
+import React, { useState, useEffect } from "react";
+import styled from "styled-components";
 import { Form } from "react-bootstrap";
-import { IoIosArrowDown } from "react-icons/io";
-import profile from '../images/bird_cockatiel.jpg'
+import { IoIosArrowDown, IoMdCheckmarkCircle } from "react-icons/io";
+import profile from "../images/bird_cockatiel.jpg";
+import NavDropdown from "react-bootstrap/NavDropdown";
+import api from "../Auth/Api";
+import { toast } from "react-toastify";
+import { useAuth } from '../Auth/Auth';
 
 export function Header() {
+  const [show, setShow] = useState(false);
+  const [user, setUsers] = useState("");
+  const { close } = useAuth();
+
+    const handleLogout = () => {
+    close();
+    // Aquí puedes agregar más lógica después del logout si es necesario
+  };
+
+  const getUsers = async () => {
+    try {
+      const response = await api.get("/api/users");
+      setUsers(response.data);
+      return response.data;
+    } catch (err) {
+      setError(err.response?.data?.detail || "Error al obtener usuarios");
+      throw err;
+    } finally {
+    }
+  };
+
+  useEffect(() => {
+    getUsers();
+  }, []);
+
   return (
-    <HeaderContainer className='d-flex justify-content-between align-items-center ps-4 pe-4'>
-      <div style={{width: "90%"}}>
-      <ThemeFormControl 
-        type="text"
-        placeholder="Search..."
-      />
+    <HeaderContainer className="d-flex justify-content-between align-items-center gap-3">
+      <div style={{ width: "80%" }}>
+        <ThemeFormControl type="text" placeholder="Search..." />
       </div>
-      <div className='d-flex flex-row align-items-center'>
-      <div className='profile-icon'>
-        <img src={profile} alt="Profile" className='img-profile' />
-      </div>
-      <IoIosArrowDown className='ms-2' size="20"/>
+      <div className="d-flex flex-row align-items-center">
+        <NavDropdown
+          title={
+            <div className="d-flex align-items-center">
+              <img
+                src={profile}
+                alt="Profile"
+                className="rounded-circle me-2"
+                style={{ width: "48px", height: "48px" }}
+              />
+              <IoIosArrowDown />
+            </div>
+          }
+          align="end"
+          menuVariant="dark"
+          className="custom-dropdown"
+        >
+          <NavDropdown.Item href="#action/3.1">
+            <div className="d-flex flex-row align-items-center gap-3">
+              <img
+                src={profile}
+                alt="Profile"
+                className="rounded-circle me-2"
+                style={{ width: "68px", height: "68px"}}
+              />
+              <div className="d-flex flex-column">
+                <span>Personal</span>
+                <span>{user?.username}</span>
+                <span>{user?.email}</span>
+              </div>
+              <div><IoMdCheckmarkCircle size={20} color="#9fef00"  /></div>
+            </div>
+            <hr />
+          </NavDropdown.Item>
+          <NavDropdown.Item href="/config">Configuración</NavDropdown.Item>
+          <NavDropdown.Item href="#action/3.3">Mis tableros</NavDropdown.Item>
+         <hr className="ms-3 me-3"/>
+          <NavDropdown.Item onClick={handleLogout}>Cerrar sesión</NavDropdown.Item>
+        </NavDropdown>
       </div>
     </HeaderContainer>
   );
@@ -33,7 +93,7 @@ const HeaderContainer = styled.header`
   right: 0;
   height: 60px;
   z-index: 100;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
   margin-left: 80px;
@@ -49,11 +109,13 @@ const ThemeFormControl = styled(Form.Control)`
     background-color: ${({ theme }) => theme.inputBg || theme.bg} !important;
     color: ${({ theme }) => theme.inputText || theme.text} !important;
     border-color: ${({ theme }) => theme.primary} !important;
-    box-shadow: 0 0 0 0.2rem ${({ theme }) => theme.focusShadow || 'rgba(0,123,255,.25)'} !important;
+    box-shadow: 0 0 0 0.2rem
+      ${({ theme }) => theme.focusShadow || "rgba(0,123,255,.25)"} !important;
   }
 
   &::placeholder {
-    color: ${({ theme }) => theme.inputPlaceholder || theme.textSecondary} !important;
+    color: ${({ theme }) =>
+      theme.inputPlaceholder || theme.textSecondary} !important;
     opacity: 1;
   }
 `;
