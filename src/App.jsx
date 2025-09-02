@@ -11,6 +11,7 @@ import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
 import AuthProvider from "./Auth/Auth";
 import { ToastContainer, toast } from "react-toastify";
+import MobileFooter from "./components/Footer";
 
 export const ThemeContext = React.createContext(null);
 
@@ -21,11 +22,25 @@ const Layout = ({ children, sidebarOpen }) => {
       <Sidebar sidebarOpen={sidebarOpen} />
       <ContentWrapper sidebarOpen={sidebarOpen}>
         <Header />
-        {children}
+         <MainContent>
+          {children}
+        </MainContent>
+        <MobileFooter />
       </ContentWrapper>
     </AppWrapper>
   );
 };
+
+const MainContent = styled.main`
+  flex: 1;
+  padding: 1rem 2rem;
+  padding-bottom: 80px; /* Espacio para el footer móvil */
+
+  @media (max-width: 768px) {
+    padding: 1rem;
+    padding-bottom: 80px; /* Ajusta según la altura de tu footer */
+  }
+`;
 
 function App() {
   const [theme, setTheme] = useState("dark");
@@ -83,7 +98,11 @@ const RouterContent = ({ sidebarOpen, setSidebarOpen }) => {
   const location = useLocation();
   // Cambia esta condición para identificar correctamente la página de login
   const isLoginPage =
-    location.pathname === "/" || location.pathname === "/login";
+    location.pathname === "/" || 
+    location.pathname === "/login" || 
+    location.pathname === "/register";
+
+
 
   return (
     <>
@@ -110,8 +129,11 @@ const ContentWrapper = styled.div`
   transition: margin-left 0.3s;
   margin-left: 90px;
   min-width: 0; // Fix para flexbox
-  margin-top: 30px
+  margin-top: 30px;
 
+   @media (max-width: 768px) {
+   margin-left: 0px !important;
+}
 
 `;
 

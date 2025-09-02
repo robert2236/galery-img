@@ -36,9 +36,19 @@ export function Header() {
 
   return (
     <HeaderContainer className="d-flex justify-content-between align-items-center gap-3">
-      <div style={{ width: "80%" }}>
-        <ThemeFormControl type="text" placeholder="Search..." />
+         <div className="row align-items-center w-100">
+    {/* Búsqueda ocupa 9 columnas (75%) en mobile, auto en desktop */}
+    <div className="col-sm-9">
+      <div className="d-flex align-items-center">
+        <div className="d-sm-none me-2">Logo</div>
+        <ThemeFormControl 
+          type="text" 
+          placeholder="Search..." 
+          className="w-100"
+        />
       </div>
+    </div>
+  </div>
       <div className="d-flex flex-row align-items-center">
         <NavDropdown
           title={
@@ -98,6 +108,10 @@ const HeaderContainer = styled.header`
   align-items: center;
   margin-left: 80px;
   border-radius: 5px;
+
+    @media (max-width: 768px) {
+    margin-left: 0px;
+  }
 `;
 
 const ThemeFormControl = styled(Form.Control)`

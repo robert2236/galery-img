@@ -67,8 +67,8 @@ const secondarylinksArray = [
 
 
   return (
-    <Container themeUse={theme}>
-      <SidebarContent>
+    <Container className="d-none d-sm-inline" themeUse={theme}>
+      <SidebarContent >
         <div className="Logocontent">
           <div className="imgcontent">
             <img src={logo} alt="Logo" />

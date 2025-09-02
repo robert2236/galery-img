@@ -94,7 +94,7 @@ export function Upload() {
       setUsers(response.data);
       return response.data;
     } catch (err) {
-      setError(err.response?.data?.detail || "Error al obtener usuarios");
+      toast.error(err.response?.data?.detail || "Error al obtener usuarios");
       throw err;
     } finally {
     }
@@ -133,7 +133,7 @@ export function Upload() {
   const uploadFile = (data) => {
     setLoading(true);
     data.category = selectedCategory?.value;
-    data.img_url = base64String;
+    data.image_url = base64String;
     data.user_id = user?.user_id;
     
 
@@ -142,7 +142,7 @@ export function Upload() {
       return;
     }
 
-    if (!data.img_url) {
+    if (!data.image_url) {
       toast.warning("Debes de seleccionar una imagen");
       return;
     }
@@ -153,8 +153,10 @@ export function Upload() {
     }
 
     try {
-      axios.post("/api/create_image", data);
+      const response = axios.post("/api/create_image", data);
+      if (response){
       toast.success("¡Imagen cargada de forma exitosa!");
+      }
     } catch (error) {
       toast.error("Hubo un error al subir la imagen");
     } finally {
@@ -403,5 +405,5 @@ export function Upload() {
   );
 }
 const Container = styled.div`
-  height: 100vh;
+  height: auto;
 `;

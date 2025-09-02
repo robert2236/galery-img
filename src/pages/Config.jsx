@@ -79,7 +79,7 @@ export const Config = () => {
         <Col
           xs={12}
           lg={7}
-          className="p-sm-5 p-2 mb-3 d-flex  justify-content-center
+          className="p-sm-5 p-4 mb-3 d-flex  justify-content-center
            gap-lg-5"
           style={{ borderRadius: "15px", border: "2px solid #808080" }}
         >
@@ -155,5 +155,5 @@ export const Config = () => {
 };
 
 const Container = styled.div`
-  height: 100vh;
+  height: auto;
 `;
