@@ -6,11 +6,12 @@ import styled from "styled-components";
 import { useForm } from "react-hook-form";
 import api from "../Auth/Api";
 import { toast } from "react-toastify";
+import { Tooltip } from "react-tooltip";
 
 export const Config = () => {
   const [user, setUsers] = useState("");
   const [loading, setLoading] = useState(false);
-  
+  const [darkMode, setDarkMode] = useState(false);
 
   const {
     register,
@@ -20,6 +21,10 @@ export const Config = () => {
     reset,
     setValue,
   } = useForm();
+
+  const toggleDarkMode = () => {
+    setDarkMode(!darkMode);
+  };
 
   const getUsers = async () => {
     try {
@@ -50,7 +55,6 @@ export const Config = () => {
   }, [user, setValue]);
 
   const configuration = (data) => {
-    console.log(data);
     try {
       api.put("/api/profile", data);
       toast.success("¡Configuración actualizada forma exitosa!");
@@ -84,26 +88,46 @@ export const Config = () => {
           style={{ borderRadius: "15px", border: "2px solid #808080" }}
         >
           <form onSubmit={handleSubmit(configuration)}>
-            <div className="d-flex flex-column mb-3">
-              <span>Foto de perfil</span>
-              <img
-                src={user?.image}
-                alt="Profile"
-                className="rounded-circle me-2"
-                style={{ width: "68px", height: "68px" }}
-              />
+            <div className="d-flex flex-row mb-3 justify-content-between align-items-center">
+              <div className="d-flex flex-column ">
+                <span>Foto de perfil</span>
+                <img
+                  src={user?.image}
+                  alt="Profile"
+                  className="rounded-circle me-2"
+                  style={{ width: "68px", height: "68px" }}
+                />
+              </div>
+              <div style={{width:"30px", height:"30px"}}>
+                <Button
+                  variant={darkMode ? "light" : "dark"}
+                  onClick={toggleDarkMode}
+                  size="sm"
+                  data-tooltip-id="change-theme"
+                data-tooltip-content="Cambiar tema"
+               
+                >
+                  {darkMode ? "☀️" : "🌙"}
+                </Button>
+              </div>
+              <Tooltip id="change-theme" />
             </div>
             <Row>
               <Col xs={12} lg={6}>
                 <Form.Group className="mb-3">
                   <Form.Label>Nombre</Form.Label>
-                  <Form.Control {...register("name",  { required: true, maxLength: 20 })} type="text" />
+                  <Form.Control
+                    {...register("name", { required: true, maxLength: 20 })}
+                    type="text"
+                  />
                 </Form.Group>
               </Col>
               <Col xs={12} lg={6}>
                 <Form.Group className="mb-3">
                   <Form.Label>Apellido</Form.Label>
-                  <Form.Control {...register("surname",  { required: true, maxLength: 20 })}  />
+                  <Form.Control
+                    {...register("surname", { required: true, maxLength: 20 })}
+                  />
                 </Form.Group>
               </Col>
             </Row>
@@ -114,7 +138,7 @@ export const Config = () => {
                   <Form.Control
                     as="textarea"
                     rows={3}
-                    {...register("info", {maxLength: 200 })}
+                    {...register("info", { maxLength: 200 })}
                     type="text"
                   />
                 </Form.Group>
@@ -123,13 +147,19 @@ export const Config = () => {
             <Row>
               <Col xs={12} className="mb-3">
                 <Form.Label>Nombre de usuario</Form.Label>
-                <Form.Control type="text" {...register("username",{ required: true, maxLength: 20 })} />
+                <Form.Control
+                  type="text"
+                  {...register("username", { required: true, maxLength: 20 })}
+                />
               </Col>
             </Row>
             <Row>
               <Col xs={12} className="mb-3">
                 <Form.Label>Correo</Form.Label>
-                <Form.Control type="text" {...register("email", { required: true })} />
+                <Form.Control
+                  type="text"
+                  {...register("email", { required: true })}
+                />
               </Col>
             </Row>
             <Row>

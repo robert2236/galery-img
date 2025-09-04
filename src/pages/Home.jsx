@@ -13,6 +13,7 @@ import { toast } from "react-toastify";
 import { FaExpand, FaEllipsisH, FaCompress, FaTimes } from "react-icons/fa";
 import axios from "axios";
 import api from "../Auth/Api";
+import { useSearch } from '../App';
 
 const USE_LOCAL_IMAGES = false; // true para imágenes locales, false para endpoint API
 
@@ -31,7 +32,11 @@ export function Home() {
   const [imageComments, setImageComments] = useState({});
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [currentUsername, setCurrentUsername] = useState(null);
-  console.log(images);
+  const { search } = useSearch();
+  
+  
+    console.log(search);
+    
 
   const [zoomState, setZoomState] = useState({
     scale: 1,
@@ -103,8 +108,8 @@ export function Home() {
         setCurrentUsername(username);
 
         // Luego cargar imágenes
-        const response = await axios.get("/api/images");
-        const imageData = response.data.map((img) => ({
+        const response = await axios.get(`/api/images/search?q=${search}`);
+        const imageData = response.data.results.map((img) => ({
           url: img.image_url,
           id:
             img.image_id || img._id || Math.random().toString(36).substr(2, 9),
@@ -139,7 +144,7 @@ export function Home() {
 
   useEffect(() => {
     initializeData();
-  }, []);
+  }, [search]);
 
   // Enviar evento de vista cuando se abre el modal
   useEffect(() => {

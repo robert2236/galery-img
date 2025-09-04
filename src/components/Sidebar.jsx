@@ -8,75 +8,94 @@ import {
 } from "react-icons/ai";
 import { MdOutlineAnalytics, MdLogout } from "react-icons/md";
 import { NavLink } from "react-router-dom";
-import { useContext } from "react";
+import { useContext, useEffect, useState} from "react";
 import { ThemeContext } from "../App";
-import { useAuth } from '../Auth/Auth';
+import { useAuth } from "../Auth/Auth";
 import { FaCloudUploadAlt } from "react-icons/fa";
+import api from "../Auth/Api";
 
 export function Sidebar() {
   const { setTheme, theme } = useContext(ThemeContext);
   const { close } = useAuth();
+  const [user, setUser] = useState(null);
   const CambiarTheme = () => {
     setTheme((theme) => (theme === "light" ? "dark" : "light"));
   };
 
-   const handleLogout = () => {
+  const handleLogout = () => {
     close();
   };
 
+  const getUsers = async () => {
+    try {
+      const response = await api.get("/api/users");
+      setUser(response.data); 
+    } catch (err) {
+      toast.error("Error al cargar los datos del usuario");
+      throw err;
+    }
+  };
+
+  useEffect(() => {
+    getUsers();
+  }, []);
+
+  useEffect(() => {
+    user?.theme ? setTheme("dark") : setTheme("light");
+  }, [user]);
+
   const linksArray = [
-  {
-    label: "Home",
-    icon: <AiOutlineHome />,
-    to: "/home",
-  },
-  {
-    label: "Upload",
-    icon: <FaCloudUploadAlt />,
-    to: "/upload",
-  },
-  {
-    label: "Productos",
-    icon: <AiOutlineApartment />,
-    to: "/productos",
-  },
-  {
-    label: "Diagramas",
-    icon: <MdOutlineAnalytics />,
-    to: "/diagramas",
-  },
-  {
-    label: "Perfil",
-    icon: <MdOutlineAnalytics />,
-    to: "/reportes",
-  },
-];
+    {
+      label: "Home",
+      icon: <AiOutlineHome />,
+      to: "/home",
+    },
+    {
+      label: "Upload",
+      icon: <FaCloudUploadAlt />,
+      to: "/upload",
+    },
+    {
+      label: "Productos",
+      icon: <AiOutlineApartment />,
+      to: "/productos",
+    },
+    {
+      label: "Diagramas",
+      icon: <MdOutlineAnalytics />,
+      to: "/diagramas",
+    },
+    {
+      label: "Perfil",
+      icon: <MdOutlineAnalytics />,
+      to: "/reportes",
+    },
+  ];
 
-const secondarylinksArray = [
-  {
-    label: "Configuración",
-    icon: <AiOutlineSetting />,
-    to: "/config",
-  },
-  {
-    label: "Salir",
-    icon: <MdLogout />,
-    onClick: handleLogout
-  },
-];
-
+  const secondarylinksArray = [
+    {
+      label: "Configuración",
+      icon: <AiOutlineSetting />,
+      to: "/config",
+    },
+    {
+      label: "Salir",
+      icon: <MdLogout />,
+      onClick: handleLogout,
+    },
+  ];
 
   return (
     <Container className="d-none d-sm-inline" themeUse={theme}>
-      <SidebarContent >
+      <SidebarContent>
         <div className="Logocontent">
           <div className="imgcontent">
             <img src={logo} alt="Logo" />
           </div>
         </div>
-        
+
         {linksArray.map(({ icon, label, to }) => (
-          <div className="LinkContainer" key={label}>
+          <div className="LinkContainer Themecontent" key={label}>
             <NavLink
               to={to}
               className={({ isActive }) => `Links${isActive ? ` active` : ``}`}
@@ -87,16 +106,18 @@ const secondarylinksArray = [
             </NavLink>
           </div>
         ))}
-        
+
         <Divider />
-        
+
         {secondarylinksArray.map(({ icon, label, to, onClick }) => (
-          <div className="LinkContainer" key={label}>
+          <div className="LinkContainer " key={label}>
             {to ? (
               // Elemento con enlace
               <NavLink
                 to={to}
-                className={({ isActive }) => `Links${isActive ? ` active` : ``}`}
+                className={({ isActive }) =>
+                  `Links${isActive ? ` active` : ``}`
+                }
               >
                 <div className="Linkicon" data-tooltip={label}>
                   {icon}
@@ -107,7 +128,7 @@ const secondarylinksArray = [
               <div
                 className="Links"
                 onClick={onClick}
-                style={{ cursor: 'pointer' }}
+                style={{ cursor: "pointer" }}
               >
                 <div className="Linkicon" data-tooltip={label}>
                   {icon}
@@ -116,28 +137,7 @@ const secondarylinksArray = [
             )}
           </div>
         ))}
-        
-        <Divider />
-        
-        <div className="Themecontent">
-          <div className="Togglecontent" data-tooltip="Modo nocturno">
-            <div className="grid theme-container">
-              <div className="content">
-                <div className="demo">
-                  <label className="switch" istheme={theme}>
-                    <input
-                      istheme={theme}
-                      type="checkbox"
-                      className="theme-swither"
-                      onClick={CambiarTheme}
-                    />
-                    <span istheme={theme} className="slider round"></span>
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+
       </SidebarContent>
     </Container>
   );
@@ -162,29 +162,29 @@ const SidebarContent = styled.div`
   align-items: center;
   padding-top: 20px;
   overflow-y: auto;
-  
+
   /* Estilo de scroll personalizado */
   &::-webkit-scrollbar {
     width: 4px;
   }
-  
+
   &::-webkit-scrollbar-thumb {
     background: ${(props) => props.theme.bg3};
     border-radius: 4px;
   }
-  
+
   .Logocontent {
     display: flex;
     justify-content: center;
     align-items: center;
     padding-bottom: ${v.lgSpacing};
     width: 100%;
-    
+
     .imgcontent {
       display: flex;
       justify-content: center;
       width: 100%;
-      
+
       img {
         width: 40px;
         height: 40px;
@@ -192,15 +192,15 @@ const SidebarContent = styled.div`
       }
     }
   }
-  
+
   .LinkContainer {
     margin: 8px 0;
     width: 100%;
-    
+
     &:hover {
       background: ${(props) => props.theme.bg3};
     }
-    
+
     .Links {
       display: flex;
       justify-content: center;
@@ -209,21 +209,21 @@ const SidebarContent = styled.div`
       color: ${(props) => props.theme.text};
       height: 50px;
       width: 100%;
-      
+
       .Linkicon {
         position: relative;
         display: flex;
         justify-content: center;
         align-items: center;
         width: 100%;
-        
+
         svg {
           font-size: 24px;
         }
-        
+
         &[data-tooltip] {
           position: relative;
-          
+
           &:hover::after {
             content: attr(data-tooltip);
             position: absolute;
@@ -237,13 +237,13 @@ const SidebarContent = styled.div`
             white-space: nowrap;
             z-index: 100;
             margin-left: 10px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
             font-size: 14px;
             animation: fadeIn 0.2s ease-in-out;
           }
         }
       }
-      
+
       &.active {
         .Linkicon {
           svg {
@@ -253,18 +253,17 @@ const SidebarContent = styled.div`
       }
     }
   }
-  
+
   .Themecontent {
     width: 100%;
     display: flex;
     justify-content: center;
-    margin-top: auto;
     margin-bottom: 20px;
-    
+
     .Togglecontent {
       position: relative;
       cursor: pointer;
-      
+
       &[data-tooltip]:hover::after {
         content: attr(data-tooltip);
         position: absolute;
@@ -278,11 +277,11 @@ const SidebarContent = styled.div`
         white-space: nowrap;
         z-index: 100;
         margin-left: 10px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
         font-size: 14px;
         animation: fadeIn 0.2s ease-in-out;
       }
-      
+
       .theme-container {
         .demo {
           .switch {
@@ -290,19 +289,19 @@ const SidebarContent = styled.div`
             display: inline-block;
             width: 60px;
             height: 34px;
-            
+
             .theme-swither {
               opacity: 0;
               width: 0;
               height: 0;
-              
+
               &:checked + .slider:before {
                 left: 4px;
                 content: "🌑";
                 transform: translateX(26px);
               }
             }
-            
+
             .slider {
               position: absolute;
               cursor: pointer;
@@ -313,7 +312,7 @@ const SidebarContent = styled.div`
               background: ${({ themeUse }) =>
                 themeUse === "light" ? v.lightcheckbox : v.checkbox};
               transition: 0.4s;
-              
+
               &::before {
                 position: absolute;
                 content: "☀️";
@@ -324,10 +323,10 @@ const SidebarContent = styled.div`
                 line-height: 0px;
                 transition: 0.4s;
               }
-              
+
               &.round {
                 border-radius: 34px;
-                
+
                 &::before {
                   border-radius: 50%;
                 }
@@ -338,10 +337,16 @@ const SidebarContent = styled.div`
       }
     }
   }
-  
+
   @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-5px) translateX(0); }
-    to { opacity: 1; transform: translateY(-50%) translateX(0); }
+    from {
+      opacity: 0;
+      transform: translateY(-5px) translateX(0);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(-50%) translateX(0);
+    }
   }
 `;
 

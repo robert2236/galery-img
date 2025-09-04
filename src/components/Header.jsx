@@ -1,28 +1,39 @@
-import React, { useState, useEffect } from "react";
+import React, {  useContext,useState, useEffect } from "react";
 import styled from "styled-components";
-import { Form } from "react-bootstrap";
+import { Form, Button } from "react-bootstrap";
 import { IoIosArrowDown, IoMdCheckmarkCircle } from "react-icons/io";
 import profile from "../images/bird_cockatiel.jpg";
 import NavDropdown from "react-bootstrap/NavDropdown";
 import api from "../Auth/Api";
 import { toast } from "react-toastify";
-import { useAuth } from '../Auth/Auth';
+import { useAuth } from "../Auth/Auth";
+import { useSearch } from "../App";
+import { MdOutlineSearch } from "react-icons/md";
+import { ThemeContext } from "../App";
 
 export function Header() {
-  const [show, setShow] = useState(false);
+   const { setTheme, theme } = useContext(ThemeContext);
+  const [show, setShow] = useState(true);
   const [user, setUsers] = useState("");
+  const { setSearch } = useSearch();
+  const [darkMode, setDarkMode] = useState(false);
   const { close } = useAuth();
+   console.log(darkMode);
+   
 
-    const handleLogout = () => {
+  const handleLogout = () => {
     close();
-    // Aquí puedes agregar más lógica después del logout si es necesario
+  };
+
+  const toggleDarkMode = () => {
+    setDarkMode(!darkMode);
+    changeTheme();
   };
 
   const getUsers = async () => {
     try {
       const response = await api.get("/api/users");
       setUsers(response.data);
-      return response.data;
     } catch (err) {
       setError(err.response?.data?.detail || "Error al obtener usuarios");
       throw err;
@@ -34,21 +45,70 @@ export function Header() {
     getUsers();
   }, []);
 
+useEffect(() => {
+  if (user?.theme) {
+    setTheme("dark");
+  } else {
+    setTheme("light");
+  }
+}, [user]);
+
+  const changeTheme = async () => {
+    try {
+      await api.put("/api/change-theme", { theme: darkMode });
+      getUsers();
+    } catch (error) {
+      toast.error("No se pudo cambiar el tema");
+    }finally{
+    }
+  };
+
   return (
     <HeaderContainer className="d-flex justify-content-between align-items-center gap-3">
-         <div className="row align-items-center w-100">
-    {/* Búsqueda ocupa 9 columnas (75%) en mobile, auto en desktop */}
-    <div className="col-sm-9">
-      <div className="d-flex align-items-center">
-        <div className="d-sm-none me-2">Logo</div>
-        <ThemeFormControl 
-          type="text" 
-          placeholder="Search..." 
-          className="w-100"
-        />
+      <div className="row align-items-center w-100">
+        <div className="col-sm-9 gap-3">
+          <div className="d-flex align-items-center ms-sm-5">
+            <div className="d-sm-none d-inline me-3">Logo</div>
+            <div className="d-none d-sm-flex align-items-center flex-grow-1">
+              <ThemeFormControl
+                type="text"
+                placeholder="Buscar..."
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-100"
+                style={{ minWidth: "200px" }}
+              />
+            </div>
+
+            {/* CONTENEDOR MOBILE */}
+            <div className="d-flex d-sm-none align-items-center gap-2">
+              {/* Barra mobile - Condicional */}
+              {show && (
+                <div className="d-flex align-items-center me-2">
+                  <ThemeFormControl
+                    type="text"
+                    placeholder="Buscar..."
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="me-4"
+                    style={{ minWidth: "90px" }}
+                  />
+                </div>
+              )}
+
+              {/* Ícono de búsqueda mobile */}
+              <MdOutlineSearch
+                className="cursor-pointer position-absolute"
+                style={{
+                  right: "25%",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                }}
+                onClick={() => setShow((prev) => !prev)}
+                size={30}
+              />
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
       <div className="d-flex flex-row align-items-center">
         <NavDropdown
           title={
@@ -66,27 +126,43 @@ export function Header() {
           menuVariant="dark"
           className="custom-dropdown"
         >
-          <NavDropdown.Item href="#action/3.1">
+          <NavDropdown.Item href="/Config">
             <div className="d-flex flex-row align-items-center gap-3">
               <img
                 src={profile}
                 alt="Profile"
                 className="rounded-circle me-2"
-                style={{ width: "68px", height: "68px"}}
+                style={{ width: "68px", height: "68px" }}
               />
               <div className="d-flex flex-column">
                 <span>Personal</span>
                 <span>{user?.username}</span>
                 <span>{user?.email}</span>
               </div>
-              <div><IoMdCheckmarkCircle size={20} color="#9fef00"  /></div>
+              <div>
+                <IoMdCheckmarkCircle size={20} color="#9fef00" />
+              </div>
             </div>
             <hr />
           </NavDropdown.Item>
           <NavDropdown.Item href="/config">Configuración</NavDropdown.Item>
-          <NavDropdown.Item href="#action/3.3">Mis tableros</NavDropdown.Item>
-         <hr className="ms-3 me-3"/>
-          <NavDropdown.Item onClick={handleLogout}>Cerrar sesión</NavDropdown.Item>
+          <NavDropdown.Item   onClick={toggleDarkMode} className="d-flex flex-row align-items-center justify-content-between">
+            Cambiar tema{" "}
+            <div style={{ width: "30px", height: "30px" }}>
+              <Button
+                variant={darkMode ? "dark" : "ligth"}
+                size="sm"
+                data-tooltip-id="change-theme"
+                data-tooltip-content="Cambiar tema"
+              >
+                {darkMode ? "🌙" : "☀️"}
+              </Button>
+            </div>
+          </NavDropdown.Item>
+          <hr className="ms-3 me-3" />
+          <NavDropdown.Item onClick={handleLogout}>
+            Cerrar sesión
+          </NavDropdown.Item>
         </NavDropdown>
       </div>
     </HeaderContainer>
@@ -109,7 +185,7 @@ const HeaderContainer = styled.header`
   margin-left: 80px;
   border-radius: 5px;
 
-    @media (max-width: 768px) {
+  @media (max-width: 768px) {
     margin-left: 0px;
   }
 `;
@@ -127,9 +203,17 @@ const ThemeFormControl = styled(Form.Control)`
       ${({ theme }) => theme.focusShadow || "rgba(0,123,255,.25)"} !important;
   }
 
+  /* Placeholder adaptativo */
   &::placeholder {
-    color: ${({ theme }) =>
-      theme.inputPlaceholder || theme.textSecondary} !important;
+    color: #6c757d !important; /* Default light mode */
     opacity: 1;
+  }
+
+  .dark-mode &::placeholder {
+    color: #fff !important; /* Dark mode */
+  }
+
+  .light-mode &::placeholder {
+    color: #6c757d !important; /* Light mode */
   }
 `;

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@react-login-page/page6": "^1.0.5",
+    "aos": "^2.3.4",
     "axios": "^1.11.0",
     "bootstrap": "^5.3.6",
     "js-cookie": "^3.0.5",

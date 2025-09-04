@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import { createContext, useContext, useState,useEffect } from 'react';
+import React from 'react'
 import { MyRoutes } from "./routers/routes";
 import { BrowserRouter, useLocation } from "react-router-dom";
 import { Light, Dark } from "./styles/Themes";
@@ -13,21 +14,46 @@ import AuthProvider from "./Auth/Auth";
 import { ToastContainer, toast } from "react-toastify";
 import MobileFooter from "./components/Footer";
 
+import AOS from "aos";
+import "aos/dist/aos.css";
+
 export const ThemeContext = React.createContext(null);
+const SearchContext = createContext();
+
+export const useSearch = () => {
+  const context = useContext(SearchContext);
+  if (!context) {
+    throw new Error('useSearch debe usarse dentro de un SearchProvider');
+  }
+  return context;
+};
+
+export const SearchProvider = ({ children }) => {
+  const [search, setSearch] = useState("");
+  
+  return (
+    <SearchContext.Provider value={{ search, setSearch }}>
+      {children}
+    </SearchContext.Provider>
+  );
+};
 
 // Componente Layout para rutas que necesitan sidebar
 const Layout = ({ children, sidebarOpen }) => {
+  
   return (
+    <SearchProvider>
     <AppWrapper>
       <Sidebar sidebarOpen={sidebarOpen} />
       <ContentWrapper sidebarOpen={sidebarOpen}>
-        <Header />
+        <Header  />
          <MainContent>
           {children}
         </MainContent>
         <MobileFooter />
       </ContentWrapper>
     </AppWrapper>
+    </SearchProvider>
   );
 };
 
@@ -46,6 +72,10 @@ function App() {
   const [theme, setTheme] = useState("dark");
   const themeStyle = theme === "light" ? Light : Dark;
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  useEffect(() => {
+    AOS.init();
+  }, []);
 
   axios.defaults.baseURL = import.meta.env.VITE_API_URL;
 

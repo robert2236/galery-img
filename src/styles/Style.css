@@ -54,6 +54,35 @@ body.dark-mode {
   color: #495057;
   border-color: #ced4da;
 }
+
+body.light-mode ::placeholder {
+  color: #6c757d !important;
+  opacity: 1;
+}
+
+/* Placeholder para modo oscuro */
+body.dark-mode ::placeholder {
+  color: #fff !important;
+  opacity: 1;
+}
+
+/* Placeholder específico para inputs */
+body.light-mode input::placeholder {
+  color: #6c757d !important;
+}
+
+body.dark-mode input::placeholder {
+  color: #fff !important;
+}
+
+/* Para tu ThemeFormControl específicamente */
+body.light-mode .theme-form-control::placeholder {
+  color: #6c757d !important;
+}
+
+body.dark-mode .theme-form-control::placeholder {
+  color: #fff !important;
+}
 /****Styles Card ******/
 
 .card-images {
