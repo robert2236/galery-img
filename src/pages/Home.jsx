@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useContext } from "react";
 import { Modal, Carousel } from "react-bootstrap";
 import {
   FaStar,
@@ -13,13 +13,15 @@ import { toast } from "react-toastify";
 import { FaExpand, FaEllipsisH, FaCompress, FaTimes } from "react-icons/fa";
 import axios from "axios";
 import api from "../Auth/Api";
-import { useSearch } from '../App';
+import { useSearch } from "../App";
+import { ThemeContext } from "../App";
 
 const USE_LOCAL_IMAGES = false; // true para imágenes locales, false para endpoint API
 
 export function Home() {
   const [images, setImages] = useState([]);
   const [isLoading, setIsLoading] = useState(!USE_LOCAL_IMAGES);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState(null);
   const [ratings, setRatings] = useState([]);
   const [favorites, setFavorites] = useState([]);
@@ -32,11 +34,38 @@ export function Home() {
   const [imageComments, setImageComments] = useState({});
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [currentUsername, setCurrentUsername] = useState(null);
+  const [showRecommendedSection, setShowRecommendedSection] = useState(true);
+  const [recommendedImages, setRecommendedImages] = useState([]);
+  const [filteredRecommendedImages, setFilteredRecommendedImages] = useState(
+    []
+  );
+  const [user, setUser] = useState(null);
   const { search } = useSearch();
-  
-  
-    console.log(search);
-    
+
+  // Estados para paginación mejorada
+  const [imagesPagination, setImagesPagination] = useState({
+    page: 1,
+    has_next: false,
+    has_prev: false,
+    next_page: null,
+    prev_page: null,
+    total: 0,
+    total_pages: 0,
+  });
+
+  const [recommendedPagination, setRecommendedPagination] = useState({
+    page: 1,
+    has_next: false,
+    has_prev: false,
+    next_page: null,
+    prev_page: null,
+    total: 0,
+    total_pages: 0,
+  });
+
+  // Referencias para observación de scroll
+  const observerTarget = useRef(null);
+  const recommendedObserverTarget = useRef(null);
 
   const [zoomState, setZoomState] = useState({
     scale: 1,
@@ -47,13 +76,12 @@ export function Home() {
   const imageRef = useRef(null);
   const [viewedImages, setViewedImages] = useState(new Set());
 
-  const getCurrentUsername = async () => {
+  const getCurrentUser = async () => {
     try {
       const userResponse = await api.get("/api/users");
-      return userResponse.data.username;
+      return userResponse.data;
     } catch (error) {
       toast.error("Error al obtener el usuario actual:", error);
-      return null;
     }
   };
 
@@ -89,7 +117,152 @@ export function Home() {
     }
   };
 
-  // Cargar imágenes según la configuración
+  // Función para filtrar las imágenes recomendadas con las imágenes normales
+  const filterRecommendedImages = (recommendedImages, allImages) => {
+    if (!recommendedImages || recommendedImages.length === 0) return [];
+
+    // Obtener IDs de las imágenes recomendadas
+    const recommendedIds = recommendedImages.map(
+      (rec) => rec.image_id || rec.id
+    );
+
+    // Filtrar las imágenes normales que coinciden con las recomendadas
+    return allImages.filter(
+      (img) =>
+        recommendedIds.includes(img.id) ||
+        (img.image_id && recommendedIds.includes(img.image_id))
+    );
+  };
+
+  // Cargar imágenes normales con paginación
+  const loadImages = async (page = 1, isLoadMore = false) => {
+    if (isLoadMore) {
+      setIsLoadingMore(true);
+    } else {
+      setIsLoading(true);
+    }
+
+    try {
+      const response = await axios.get(
+        `/api/images/search?q=${search}&page=${page}&limit=20`
+      );
+      const imageData = response.data.results.map((img) => ({
+        url: img.image_url,
+        id: img.image_id || img._id || Math.random().toString(36).substr(2, 9),
+        image_id: img.image_id,
+        liked_by: img.liked_by || [],
+        comments: (img.comments || []).map((comment) => ({
+          id: comment.comment_id,
+          userId: comment.user_id,
+          text: comment.comment,
+          createdAt: comment.created_at,
+          parentCommentId: comment.parent_comment_id,
+          likes: comment.likes,
+          replies: comment.replies || [],
+        })),
+      }));
+
+      if (isLoadMore) {
+        setImages((prev) => [...prev, ...imageData]);
+        setRatings((prev) => [
+          ...prev,
+          ...Array(imageData.length).fill({ stars: 0, count: 0 }),
+        ]);
+
+        // Obtener usuario para actualizar favoritos
+        const userData = await getCurrentUser();
+        const newFavorites = imageData.map(
+          (img) =>
+            userData &&
+            userData.username &&
+            img.liked_by.includes(userData.username)
+        );
+        setFavorites((prev) => [...prev, ...newFavorites]);
+      } else {
+        setImages(imageData);
+        setRatings(Array(imageData.length).fill({ stars: 0, count: 0 }));
+
+        // Obtener usuario para inicializar favoritos
+        const userData = await getCurrentUser();
+        const initialFavorites = imageData.map(
+          (img) =>
+            userData &&
+            userData.username &&
+            img.liked_by.includes(userData.username)
+        );
+        setFavorites(initialFavorites);
+      }
+
+      // Actualizar estado de paginación con la respuesta del servidor
+      setImagesPagination({
+        page: response.data.page || page,
+        has_next: response.data.has_next || false,
+        has_prev: response.data.has_prev || false,
+        next_page: response.data.next_page || null,
+        prev_page: response.data.prev_page || null,
+        total: response.data.total || 0,
+        total_pages: response.data.total_pages || 0,
+      });
+    } catch (err) {
+      setError(err.message);
+      toast.error("Error loading images");
+    } finally {
+      setIsLoading(false);
+      setIsLoadingMore(false);
+    }
+  };
+
+  // Cargar imágenes recomendadas con paginación
+  const loadRecommendedImages = async (page = 1, isLoadMore = false) => {
+    try {
+      const userData = await getCurrentUser();
+
+      if (userData && userData.user_id) {
+        const recommendationsResponse = await axios.get(
+          `/recommend/user/${userData.user_id}?limit=10&page=${page}`
+        );
+
+        if (
+          recommendationsResponse.data.recommendations &&
+          recommendationsResponse.data.recommendations.length > 0
+        ) {
+          if (isLoadMore) {
+            setRecommendedImages((prev) => [
+              ...prev,
+              ...recommendationsResponse.data.recommendations,
+            ]);
+          } else {
+            setRecommendedImages(recommendationsResponse.data.recommendations);
+          }
+
+          // Actualizar estado de paginación con la respuesta del servidor
+          setRecommendedPagination({
+            page: recommendationsResponse.data.pagination?.page || page,
+            has_next:
+              recommendationsResponse.data.pagination?.has_next || false,
+            has_prev:
+              recommendationsResponse.data.pagination?.has_prev || false,
+            next_page:
+              recommendationsResponse.data.pagination?.next_page || null,
+            prev_page:
+              recommendationsResponse.data.pagination?.prev_page || null,
+            total: recommendationsResponse.data.pagination?.total || 0,
+            total_pages:
+              recommendationsResponse.data.pagination?.total_pages || 0,
+          });
+
+          setShowRecommendedSection(true);
+        } else {
+          setShowRecommendedSection(false);
+        }
+      }
+    } catch (recommendationError) {
+      console.log("No hay recomendaciones disponibles:", recommendationError);
+      setShowRecommendedSection(false);
+    }
+  };
+
+  // Cargar datos iniciales
   const initializeData = async () => {
     if (USE_LOCAL_IMAGES) {
       const localImages = Object.values(
@@ -102,46 +275,92 @@ export function Home() {
       setRatings(Array(localImages.length).fill({ stars: 0, count: 0 }));
       setFavorites(Array(localImages.length).fill(false));
     } else {
-      try {
-        // Obtener usuario actual primero
-        const username = await getCurrentUsername();
-        setCurrentUsername(username);
-
-        // Luego cargar imágenes
-        const response = await axios.get(`/api/images/search?q=${search}`);
-        const imageData = response.data.results.map((img) => ({
-          url: img.image_url,
-          id:
-            img.image_id || img._id || Math.random().toString(36).substr(2, 9),
-          liked_by: img.liked_by || [],
-          comments: (img.comments || []).map((comment) => ({
-            id: comment.comment_id,
-            userId: comment.user_id,
-            text: comment.comment,
-            createdAt: comment.created_at,
-            parentCommentId: comment.parent_comment_id,
-            likes: comment.likes,
-            replies: comment.replies || [],
-          })),
-        }));
-
-        setImages(imageData);
-        setRatings(Array(imageData.length).fill({ stars: 0, count: 0 }));
-
-        // Inicializar favoritos basado en si el usuario actual ha dado like
-        const initialFavorites = imageData.map(
-          (img) => username && img.liked_by.includes(username)
-        );
-        setFavorites(initialFavorites);
-      } catch (err) {
-        setError(err.message);
-        toast.error("Error loading images");
-      } finally {
-        setIsLoading(false);
-      }
+      // Cargar imágenes y recomendaciones
+      await loadImages(1, false);
+      await loadRecommendedImages(1, false);
     }
   };
 
+  // Cargar más imágenes (scroll infinito)
+  const loadMoreImages = async () => {
+    if (isLoadingMore || !imagesPagination.has_next) return;
+
+    const nextPage = imagesPagination.next_page || imagesPagination.page + 1;
+    await loadImages(nextPage, true);
+  };
+
+  // Cargar más recomendaciones (scroll infinito)
+  const loadMoreRecommended = async () => {
+    if (isLoadingMore || !recommendedPagination.has_next) return;
+
+    const nextPage =
+      recommendedPagination.next_page || recommendedPagination.page + 1;
+    await loadRecommendedImages(nextPage, true);
+  };
+
+  // Configurar Intersection Observer para scroll infinito de imágenes normales
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (
+          entries[0].isIntersecting &&
+          imagesPagination.has_next &&
+          !isLoadingMore &&
+          !search
+        ) {
+          loadMoreImages();
+        }
+      },
+      { threshold: 1.0 }
+    );
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => {
+      if (observerTarget.current) {
+        observer.unobserve(observerTarget.current);
+      }
+    };
+  }, [imagesPagination.has_next, isLoadingMore, search]);
+
+  // Configurar Intersection Observer para scroll infinito de recomendaciones
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (
+          entries[0].isIntersecting &&
+          recommendedPagination.has_next &&
+          !isLoadingMore &&
+          !search
+        ) {
+          loadMoreRecommended();
+        }
+      },
+      { threshold: 1.0 }
+    );
+
+    if (recommendedObserverTarget.current) {
+      observer.observe(recommendedObserverTarget.current);
+    }
+
+    return () => {
+      if (recommendedObserverTarget.current) {
+        observer.unobserve(recommendedObserverTarget.current);
+      }
+    };
+  }, [recommendedPagination.has_next, isLoadingMore, search]);
+
+  // Actualizar imágenes recomendadas filtradas cuando cambian las recomendaciones o imágenes
+  useEffect(() => {
+    if (recommendedImages.length > 0 && images.length > 0) {
+      const filtered = filterRecommendedImages(recommendedImages, images);
+      setFilteredRecommendedImages(filtered);
+    }
+  }, [recommendedImages, images]);
+
+  // Cargar datos cuando cambia la búsqueda
   useEffect(() => {
     initializeData();
   }, [search]);
@@ -494,56 +713,156 @@ export function Home() {
 
   return (
     <Container className="mt-3">
-      <GalleryGrid>
-        {images.map((img, index) => (
-          <GalleryItem
-            className="mb-3"
-            key={index}
-            onClick={() => handleShow(index)}
-          >
-            <img
-              src={img.url || img}
-              alt={`Imagen ${index + 1}`}
-              loading="lazy"
-            />
-            <RatingOverlay>
-              <LeftSection>
-                <FavoriteIcon
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    sendInteraction(img.id, "likes", index);
-                  }}
-                >
-                  {favorites[index] ? (
-                    <FaHeart style={{ color: "#ff4d6d", fontSize: "1.2rem" }} />
-                  ) : (
-                    <FaRegHeart style={{ color: "#fff", fontSize: "1.2rem" }} />
-                  )}
-                </FavoriteIcon>
-              </LeftSection>
+      {/* Sección de imágenes recomendadas */}
+      {showRecommendedSection &&
+        filteredRecommendedImages.length > 0 &&
+        !search && (
+          <RecommendedSection>
+            <SectionTitle>Quizás te interese</SectionTitle>
+            <GalleryGrid>
+              {filteredRecommendedImages.map((img, index) => {
+                // Encontrar el índice real en el array de imágenes para acceder a likes/comentarios
+                const realIndex = images.findIndex((i) => i.id === img.id);
 
-              <RightSection>
-                <StarRatingDisplay>
-                  <FaStar style={{ color: "#ffc107" }} />
-                  <RatingText>
-                    {ratings[index]?.stars?.toFixed(1) || "0.0"} (
-                    {ratings[index]?.count || 0})
-                  </RatingText>
-                </StarRatingDisplay>
-              </RightSection>
-            </RatingOverlay>
-          </GalleryItem>
-        ))}
-      </GalleryGrid>
+                return (
+                  <GalleryItem
+                    className="mb-3"
+                    key={`recommended-${img.id}-${index}`}
+                    onClick={() => handleShow(realIndex)}
+                  >
+                    <img
+                      src={img.url || img}
+                      alt={`Imagen recomendada ${index + 1}`}
+                      loading="lazy"
+                    />
+                    <RatingOverlay>
+                      <LeftSection>
+                        <FavoriteIcon
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            sendInteraction(img.id, "likes", realIndex);
+                          }}
+                        >
+                          {favorites[realIndex] ? (
+                            <FaHeart
+                              style={{ color: "#ff4d6d", fontSize: "1.2rem" }}
+                            />
+                          ) : (
+                            <FaRegHeart
+                              style={{ color: "#fff", fontSize: "1.2rem" }}
+                            />
+                          )}
+                        </FavoriteIcon>
+                      </LeftSection>
+
+                      <RightSection>
+                        <StarRatingDisplay>
+                          <FaStar style={{ color: "#ffc107" }} />
+                          <RatingText>
+                            {ratings[realIndex]?.stars?.toFixed(1) || "0.0"} (
+                            {ratings[realIndex]?.count || 0})
+                          </RatingText>
+                        </StarRatingDisplay>
+                      </RightSection>
+                    </RatingOverlay>
+                  </GalleryItem>
+                );
+              })}
+            </GalleryGrid>
+
+            {/* Elemento observador para scroll infinito de recomendaciones */}
+            {recommendedPagination.has_next && (
+              <div
+                ref={recommendedObserverTarget}
+                style={{ minHeight: "50px" }}
+              >
+                {isLoadingMore && (
+                  <LoadingText>
+                    <Spinner />
+                    Cargando más recomendaciones...
+                  </LoadingText>
+                )}
+              </div>
+            )}
+          </RecommendedSection>
+        )}
+
+      {/* Sección de todas las imágenes */}
+      {images.length > 0 && (
+        <AllImagesSection>
+          {!search && <SectionTitle>Todas las imágenes</SectionTitle>}
+          <GalleryGrid>
+            {images.map((img, index) => (
+              <GalleryItem
+                className="mb-3"
+                key={`all-${img.id}-${index}`}
+                onClick={() => handleShow(index)}
+              >
+                <img
+                  src={img.url || img}
+                  alt={`Imagen ${index + 1}`}
+                  loading="lazy"
+                />
+                <RatingOverlay>
+                  <LeftSection>
+                    <FavoriteIcon
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        sendInteraction(img.id, "likes", index);
+                      }}
+                    >
+                      {favorites[index] ? (
+                        <FaHeart
+                          style={{ color: "#ff4d6d", fontSize: "1.2rem" }}
+                        />
+                      ) : (
+                        <FaRegHeart
+                          style={{ color: "#fff", fontSize: "1.2rem" }}
+                        />
+                      )}
+                    </FavoriteIcon>
+                  </LeftSection>
+
+                  <RightSection>
+                    <StarRatingDisplay>
+                      <FaStar style={{ color: "#ffc107" }} />
+                      <RatingText>
+                        {ratings[index]?.stars?.toFixed(1) || "0.0"} (
+                        {ratings[index]?.count || 0})
+                      </RatingText>
+                    </StarRatingDisplay>
+                  </RightSection>
+                </RatingOverlay>
+              </GalleryItem>
+            ))}
+          </GalleryGrid>
+
+          {/* Elemento observador para scroll infinito de imágenes normales */}
+          {imagesPagination.has_next && !search && (
+            <div ref={observerTarget} style={{ height: "20px" }}>
+              {isLoadingMore && (
+                <LoadingText>Cargando más imágenes...</LoadingText>
+              )}
+            </div>
+          )}
+        </AllImagesSection>
+      )}
 
       <TransparentModal show={show} onHide={handleClose} centered size="xl">
-        <ModalBackdrop onClick={handleClose} $isExpanded={isExpanded}>
+        <ModalBackdrop
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              handleClose();
+            }
+          }}
+          $isExpanded={isExpanded}
+        >
           <ModalContentWrapper
             $showComments={showComments}
             $isExpanded={isExpanded}
           >
             <CarouselContainer
-            className="modal-carousel"
+              className="modal-carousel"
               onClick={(e) => e.stopPropagation()}
               $isExpanded={isExpanded}
               $showComments={showComments}
@@ -553,7 +872,6 @@ export function Home() {
                 activeIndex={selectedImageIndex}
                 onSelect={setSelectedImageIndex}
                 interval={null}
-                
               >
                 {images.map((img, index) => (
                   <Carousel.Item key={index}>
@@ -704,8 +1022,24 @@ export function Home() {
   );
 }
 
-// Estilos para el sistema de comentarios
-// Estilos para el sistema de comentarios - ACTUALIZADO para versión móvil
+const RecommendedSection = styled.div`
+  margin-bottom: 30px;
+`;
+
+const AllImagesSection = styled.div`
+  margin-top: 20px;
+`;
+
+const SectionTitle = styled.h2`
+  font-size: 1.5rem;
+  margin-top: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: ${({ theme }) => theme.inputText || theme.text} !important;
+  font-weight: 600;
+`;
+
 const CommentsPanel = styled.div`
   position: absolute;
   right: 0;
@@ -986,10 +1320,7 @@ const FavoriteButton = styled.button`
 `;
 
 const ModalControlsContainer = styled.div`
-  position: absolute;
-  top: 15px;
-  left: 15px;
-  right: 15px;
+  margin-bottom: 18px;
   display: flex;
   justify-content: space-between;
   z-index: 10;
@@ -1178,4 +1509,101 @@ const StyledCarousel = styled(Carousel)`
   .carousel-inner {
     border-radius: 15px;
   }
+`;
+
+const ViewToggleContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+  gap: 10px;
+  padding: 0 16px;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: center;
+  }
+`;
+
+const ViewToggleButton = styled.button`
+  background: ${(props) => (props.active ? "#4267B2" : "rgba(0, 0, 0, 0.1)")};
+  color: ${(props) => (props.active ? "white" : "#333")};
+  border: none;
+  padding: 12px 24px;
+  border-radius: 25px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  min-width: 200px;
+  font-size: 14px;
+
+  &:hover {
+    background: ${(props) =>
+      props.active ? "#365899" : "rgba(0, 0, 0, 0.15)"};
+    transform: translateY(-2px);
+  }
+
+  @media (max-width: 768px) {
+    min-width: 180px;
+    padding: 10px 20px;
+  }
+`;
+
+const LoadingText = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 20px;
+  color: #666;
+  font-size: 16px;
+  gap: 15px;
+`;
+
+const Spinner = styled.div`
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #4267b2;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+`;
+
+const ModalHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 15;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+`;
+
+const HeaderLeft = styled.div`
+  display: flex;
+  align-items: center;
+`;
+
+const HeaderRight = styled.div`
+  display: flex;
+  align-items: center;
+`;
+
+const ModalTitle = styled.h5`
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
 `;

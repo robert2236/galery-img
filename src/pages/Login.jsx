@@ -94,7 +94,9 @@ export function Login() {
                 data-tooltip-content="Registrar usuario"
                 className="tooltip-link"
               >
-                <FaUserPlus size={30} className="tooltip-icon" />
+                <FaUserPlus size={30} className={`tooltip-icon ${
+            darkMode ? "bg-secondary text-white" : "bg-white text-dark"
+          }`} />
               </Link>
             </div>
 

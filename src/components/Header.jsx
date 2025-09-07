@@ -18,9 +18,8 @@ export function Header() {
   const { setSearch } = useSearch();
   const [darkMode, setDarkMode] = useState(false);
   const { close } = useAuth();
-   console.log(darkMode);
-   
 
+  
   const handleLogout = () => {
     close();
   };
@@ -182,7 +181,7 @@ const HeaderContainer = styled.header`
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
-  margin-left: 80px;
+  margin-left: 60px;
   border-radius: 5px;
 
   @media (max-width: 768px) {

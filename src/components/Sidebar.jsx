@@ -155,7 +155,7 @@ const Container = styled.div`
 const SidebarContent = styled.div`
   color: ${(props) => props.theme.text};
   background: ${(props) => props.theme.bg};
-  width: 90px;
+  width: 60px;
   height: 100%;
   display: flex;
   flex-direction: column;
