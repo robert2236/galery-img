@@ -81,6 +81,8 @@ export function Upload() {
 
   const clearFile = () => {
     setBase64String("");
+    reset();
+    selectedCategory(null);
     setFileName("");
     setFileType("");
     if (fileInputRef.current) {
@@ -157,6 +159,9 @@ export function Upload() {
       if (response){
       toast.success("¡Imagen cargada de forma exitosa!");
       }
+      reset();
+      setSelectedCategory(null);
+      setBase64String("");
     } catch (error) {
       toast.error("Hubo un error al subir la imagen");
     } finally {

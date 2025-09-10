@@ -16,7 +16,7 @@ import api from "../Auth/Api";
 import { useSearch } from "../App";
 import { ThemeContext } from "../App";
 
-const USE_LOCAL_IMAGES = false; // true para imágenes locales, false para endpoint API
+const USE_LOCAL_IMAGES = false; 
 
 export function Home() {
   const [images, setImages] = useState([]);
@@ -33,13 +33,9 @@ export function Home() {
   const [commentText, setCommentText] = useState("");
   const [imageComments, setImageComments] = useState({});
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
-  const [currentUsername, setCurrentUsername] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
   const [showRecommendedSection, setShowRecommendedSection] = useState(true);
   const [recommendedImages, setRecommendedImages] = useState([]);
-  const [filteredRecommendedImages, setFilteredRecommendedImages] = useState(
-    []
-  );
-  const [user, setUser] = useState(null);
   const { search } = useSearch();
 
   // Estados para paginación mejorada
@@ -79,9 +75,11 @@ export function Home() {
   const getCurrentUser = async () => {
     try {
       const userResponse = await api.get("/api/users");
+      setCurrentUser(userResponse.data);
       return userResponse.data;
     } catch (error) {
-      toast.error("Error al obtener el usuario actual:", error);
+      console.error("Error al obtener el usuario actual:", error);
+      return null;
     }
   };
 
@@ -89,12 +87,12 @@ export function Home() {
     const isCurrentlyFavorite = favorites[index];
 
     try {
-      if (!USE_LOCAL_IMAGES && action == "likes") {
+      if (!USE_LOCAL_IMAGES && action === "likes") {
         if (isCurrentlyFavorite) {
-          await api.delete(`/api/images/${imageId}/likes`);
+          await api.delete(`/api/images/${imageId}/likes/${currentUser.user_id}`);
         } else {
           await api.put(
-            `/api/images/${imageId}/interactions`,
+            `/api/images/${imageId}/interactions/${currentUser.user_id}`,
             {
               action: "likes",
               increment: 1,
@@ -113,25 +111,9 @@ export function Home() {
       newFavorites[index] = !isCurrentlyFavorite;
       setFavorites(newFavorites);
     } catch (error) {
+      console.error("Error al procesar tu like:", error);
       toast.error("Error al procesar tu like");
     }
-  };
-
-  // Función para filtrar las imágenes recomendadas con las imágenes normales
-  const filterRecommendedImages = (recommendedImages, allImages) => {
-    if (!recommendedImages || recommendedImages.length === 0) return [];
-
-    // Obtener IDs de las imágenes recomendadas
-    const recommendedIds = recommendedImages.map(
-      (rec) => rec.image_id || rec.id
-    );
-
-    // Filtrar las imágenes normales que coinciden con las recomendadas
-    return allImages.filter(
-      (img) =>
-        recommendedIds.includes(img.id) ||
-        (img.image_id && recommendedIds.includes(img.image_id))
-    );
   };
 
   // Cargar imágenes normales con paginación
@@ -143,7 +125,7 @@ export function Home() {
     }
 
     try {
-      const response = await axios.get(
+      const response = await api.get(
         `/api/images/search?q=${search}&page=${page}&limit=20`
       );
       const imageData = response.data.results.map((img) => ({
@@ -172,10 +154,7 @@ export function Home() {
         // Obtener usuario para actualizar favoritos
         const userData = await getCurrentUser();
         const newFavorites = imageData.map(
-          (img) =>
-            userData &&
-            userData.username &&
-            img.liked_by.includes(userData.username)
+          (img) => userData && Array.isArray(img.liked_by) && img.liked_by.includes(userData.user_id)
         );
         setFavorites((prev) => [...prev, ...newFavorites]);
       } else {
@@ -185,10 +164,7 @@ export function Home() {
         // Obtener usuario para inicializar favoritos
         const userData = await getCurrentUser();
         const initialFavorites = imageData.map(
-          (img) =>
-            userData &&
-            userData.username &&
-            img.liked_by.includes(userData.username)
+          (img) => userData && Array.isArray(img.liked_by) && img.liked_by.includes(userData.user_id)
         );
         setFavorites(initialFavorites);
       }
@@ -218,37 +194,46 @@ export function Home() {
       const userData = await getCurrentUser();
 
       if (userData && userData.user_id) {
-        const recommendationsResponse = await axios.get(
-          `/recommend/user/${userData.user_id}?limit=10&page=${page}`
+        const recommendationsResponse = await api.get(
+          `/api/recommend/${userData.user_id}?page=${page}&limit=10`
         );
 
-        if (
-          recommendationsResponse.data.recommendations &&
-          recommendationsResponse.data.recommendations.length > 0
-        ) {
+        // Verificar la estructura de la respuesta
+        let recommendations = [];
+        
+        if (recommendationsResponse.data.recommendations) {
+          // Éxito: recomendaciones personalizadas
+          recommendations = recommendationsResponse.data.recommendations;
+        } else if (recommendationsResponse.data.fallback_recommendations) {
+          // Fallback: imágenes populares
+          recommendations = recommendationsResponse.data.fallback_recommendations;
+        }
+
+        if (recommendations.length > 0) {
+          // Mapear las recomendaciones para que tengan la misma estructura que las imágenes
+          const formattedRecommendations = recommendations.map((rec) => ({
+            url: rec.image_url,
+            id: rec.image_id || Math.random().toString(36).substr(2, 9),
+            image_id: rec.image_id,
+            is_recommended: true, // Marcar como recomendada
+          }));
+
           if (isLoadMore) {
-            setRecommendedImages((prev) => [
-              ...prev,
-              ...recommendationsResponse.data.recommendations,
-            ]);
+            setRecommendedImages((prev) => [...prev, ...formattedRecommendations]);
           } else {
-            setRecommendedImages(recommendationsResponse.data.recommendations);
+            setRecommendedImages(formattedRecommendations);
           }
 
-          // Actualizar estado de paginación con la respuesta del servidor
+          // Actualizar estado de paginación
+          const paginationData = recommendationsResponse.data.pagination || {};
           setRecommendedPagination({
-            page: recommendationsResponse.data.pagination?.page || page,
-            has_next:
-              recommendationsResponse.data.pagination?.has_next || false,
-            has_prev:
-              recommendationsResponse.data.pagination?.has_prev || false,
-            next_page:
-              recommendationsResponse.data.pagination?.next_page || null,
-            prev_page:
-              recommendationsResponse.data.pagination?.prev_page || null,
-            total: recommendationsResponse.data.pagination?.total || 0,
-            total_pages:
-              recommendationsResponse.data.pagination?.total_pages || 0,
+            page: paginationData.page || page,
+            has_next: paginationData.page < paginationData.pages,
+            has_prev: paginationData.page > 1,
+            next_page: paginationData.page < paginationData.pages ? paginationData.page + 1 : null,
+            prev_page: paginationData.page > 1 ? paginationData.page - 1 : null,
+            total: paginationData.total || 0,
+            total_pages: paginationData.pages || 0,
           });
 
           setShowRecommendedSection(true);
@@ -352,29 +337,29 @@ export function Home() {
     };
   }, [recommendedPagination.has_next, isLoadingMore, search]);
 
-  // Actualizar imágenes recomendadas filtradas cuando cambian las recomendaciones o imágenes
-  useEffect(() => {
-    if (recommendedImages.length > 0 && images.length > 0) {
-      const filtered = filterRecommendedImages(recommendedImages, images);
-      setFilteredRecommendedImages(filtered);
-    }
-  }, [recommendedImages, images]);
-
   // Cargar datos cuando cambia la búsqueda
   useEffect(() => {
     initializeData();
   }, [search]);
+
+  // Cargar usuario al iniciar
+  useEffect(() => {
+    getCurrentUser();
+  }, []);
 
   // Enviar evento de vista cuando se abre el modal
   useEffect(() => {
     if (show && !USE_LOCAL_IMAGES) {
       const imageId = images[selectedImageIndex]?.id;
       if (imageId && !viewedImages.has(imageId)) {
-        sendInteraction(imageId, "views", 1);
+        api.put(`/api/images/${imageId}/interactions/${currentUser.user_id}`, {
+          action: "views",
+          increment: 1,
+        });
         setViewedImages((prev) => new Set(prev).add(imageId));
       }
     }
-  }, [show, selectedImageIndex, images, viewedImages]);
+  }, [show, selectedImageIndex, images, viewedImages, currentUser]);
 
   // Resetear el zoom cuando cambia la imagen o se cierra el modal
   useEffect(() => {
@@ -394,32 +379,11 @@ export function Home() {
     if (USE_LOCAL_IMAGES) return;
 
     try {
-      setTimeout(() => {
-        setImageComments((prev) => ({
-          ...prev,
-          [imageId]: [
-            {
-              comment_id: 1,
-              user_id: "usuario1",
-              comment: "¡Qué imagen tan increíble! Me encanta la composición.",
-              created_at: new Date(Date.now() - 86400000).toISOString(),
-              parent_comment_id: null,
-              likes: 3,
-              replies: [],
-            },
-            {
-              comment_id: 2,
-              user_id: "usuario2",
-              comment:
-                "Los colores son realmente vibrantes. ¿Qué cámara usaste?",
-              created_at: new Date(Date.now() - 43200000).toISOString(),
-              parent_comment_id: null,
-              likes: 1,
-              replies: [],
-            },
-          ],
-        }));
-      }, 500);
+      const response = await api.get(`/api/images/${imageId}/comments`);
+      setImageComments((prev) => ({
+        ...prev,
+        [imageId]: response.data,
+      }));
     } catch (error) {
       console.error("Error al cargar comentarios:", error);
     }
@@ -468,7 +432,6 @@ export function Home() {
     setIsSubmittingComment(true);
 
     try {
-      // Enviar comentario
       const response = await api.put(`/api/images/${imageId}/comments`, {
         comment: commentText.trim(),
         parent_comment_id: null,
@@ -479,7 +442,7 @@ export function Home() {
       // Actualizar estado local inmediatamente
       const newComment = {
         id: response.data.comment_id,
-        userId: currentUsername,
+        userId: currentUser.user_id,
         text: commentText.trim(),
         createdAt: new Date().toISOString(),
         parentCommentId: null,
@@ -487,10 +450,9 @@ export function Home() {
         replies: [],
       };
 
-      // Actualizar los comentarios de la imagen actual
       setImages((prevImages) =>
-        prevImages.map((img, index) =>
-          index === selectedImageIndex
+        prevImages.map((img, idx) =>
+          idx === selectedImageIndex
             ? {
                 ...img,
                 comments: [...(img.comments || []), newComment],
@@ -499,16 +461,17 @@ export function Home() {
         )
       );
 
+      // También actualizar los comentarios en el estado imageComments
       setImageComments((prev) => ({
         ...prev,
         [imageId]: [...(prev[imageId] || []), newComment],
       }));
+
+      toast.success("Comentario enviado correctamente");
     } catch (error) {
       console.error("Error al enviar comentario:", error);
       if (error.response?.status === 400) {
         toast.error(error.response.data.detail || "Error al enviar comentario");
-      } else {
-        toast.error("Error al enviar comentario");
       }
     } finally {
       setIsSubmittingComment(false);
@@ -541,8 +504,11 @@ export function Home() {
         URL.revokeObjectURL(url);
 
         const imageId = images[index]?.id;
-        if (imageId) {
-          await sendInteraction(imageId, "downloads", 1);
+        if (imageId && currentUser) {
+          await api.put(`/api/images/${imageId}/interactions/${currentUser.user_id}`, {
+            action: "downloads",
+            increment: 1,
+          });
         }
       }
       toast.success("Descarga iniciada");
@@ -587,8 +553,11 @@ export function Home() {
         }
 
         const imageId = images[index]?.id;
-        if (imageId) {
-          await sendInteraction(imageId, "shares", 1);
+        if (imageId && currentUser) {
+          await api.put(`/api/images/${imageId}/interactions/${currentUser.user_id}`, {
+            action: "shares",
+            increment: 1,
+          });
         }
       }
     } catch (error) {
@@ -613,8 +582,12 @@ export function Home() {
 
     // Enviar interacción de rating
     const imageId = images[index]?.id;
-    if (imageId && !USE_LOCAL_IMAGES) {
-      sendInteraction(imageId, "ratings", 1);
+    if (imageId && !USE_LOCAL_IMAGES && currentUser) {
+      api.put(`/api/images/${imageId}/interactions/${currentUser.user_id}`, {
+        action: "ratings",
+        increment: 1,
+        rating_value: rating,
+      });
     }
   };
 
@@ -715,59 +688,74 @@ export function Home() {
     <Container className="mt-3">
       {/* Sección de imágenes recomendadas */}
       {showRecommendedSection &&
-        filteredRecommendedImages.length > 0 &&
+        recommendedImages.length > 0 &&
         !search && (
           <RecommendedSection>
             <SectionTitle>Quizás te interese</SectionTitle>
             <GalleryGrid>
-              {filteredRecommendedImages.map((img, index) => {
-                // Encontrar el índice real en el array de imágenes para acceder a likes/comentarios
-                const realIndex = images.findIndex((i) => i.id === img.id);
+              {recommendedImages.map((img, index) => (
+                <GalleryItem
+                  className="mb-3"
+                  key={`recommended-${img.id}-${index}`}
+                  onClick={() => {
+                    // Para imágenes recomendadas, necesitamos encontrar su índice en el array principal
+                    const mainIndex = images.findIndex(i => i.image_id === img.image_id);
+                    if (mainIndex !== -1) {
+                      handleShow(mainIndex);
+                    } else {
+                      // Si no está en las imágenes principales, mostrar la recomendada directamente
+                      // Esto puede requerir lógica adicional si necesitas mostrar el modal con datos completos
+                      console.log("Imagen recomendada no encontrada en imágenes principales");
+                    }
+                  }}
+                >
+                  <img
+                    src={img.url || img}
+                    alt={`Imagen recomendada ${index + 1}`}
+                    loading="lazy"
+                  />
+                  <RatingOverlay>
+                    <LeftSection>
+                      <FavoriteIcon
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Para imágenes recomendadas, necesitamos encontrar su índice en el array principal
+                          const mainIndex = images.findIndex(i => i.image_id === img.image_id);
+                          if (mainIndex !== -1) {
+                            sendInteraction(img.id, "likes", mainIndex);
+                          }
+                        }}
+                      >
+                        {/* Para imágenes recomendadas, necesitamos verificar si están en favoritos */}
+                        {images.some(i => i.image_id === img.image_id && favorites[images.findIndex(img2 => img2.image_id === img.image_id)]) ? (
+                          <FaHeart
+                            style={{ color: "#ff4d6d", fontSize: "1.2rem" }}
+                          />
+                        ) : (
+                          <FaRegHeart
+                            style={{ color: "#fff", fontSize: "1.2rem" }}
+                          />
+                        )}
+                      </FavoriteIcon>
+                    </LeftSection>
 
-                return (
-                  <GalleryItem
-                    className="mb-3"
-                    key={`recommended-${img.id}-${index}`}
-                    onClick={() => handleShow(realIndex)}
-                  >
-                    <img
-                      src={img.url || img}
-                      alt={`Imagen recomendada ${index + 1}`}
-                      loading="lazy"
-                    />
-                    <RatingOverlay>
-                      <LeftSection>
-                        <FavoriteIcon
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            sendInteraction(img.id, "likes", realIndex);
-                          }}
-                        >
-                          {favorites[realIndex] ? (
-                            <FaHeart
-                              style={{ color: "#ff4d6d", fontSize: "1.2rem" }}
-                            />
-                          ) : (
-                            <FaRegHeart
-                              style={{ color: "#fff", fontSize: "1.2rem" }}
-                            />
-                          )}
-                        </FavoriteIcon>
-                      </LeftSection>
-
-                      <RightSection>
-                        <StarRatingDisplay>
-                          <FaStar style={{ color: "#ffc107" }} />
-                          <RatingText>
-                            {ratings[realIndex]?.stars?.toFixed(1) || "0.0"} (
-                            {ratings[realIndex]?.count || 0})
-                          </RatingText>
-                        </StarRatingDisplay>
-                      </RightSection>
-                    </RatingOverlay>
-                  </GalleryItem>
-                );
-              })}
+                    <RightSection>
+                      <StarRatingDisplay>
+                        <FaStar style={{ color: "#ffc107" }} />
+                        <RatingText>
+                          {/* Para imágenes recomendadas, necesitamos obtener su rating */}
+                          {images.some(i => i.image_id === img.image_id) 
+                            ? (ratings[images.findIndex(img2 => img2.image_id === img.image_id)]?.stars?.toFixed(1) || "0.0")
+                            : "0.0"} (
+                          {images.some(i => i.image_id === img.image_id) 
+                            ? (ratings[images.findIndex(img2 => img2.image_id === img.image_id)]?.count || 0)
+                            : 0})
+                        </RatingText>
+                      </StarRatingDisplay>
+                    </RightSection>
+                  </RatingOverlay>
+                </GalleryItem>
+              ))}
             </GalleryGrid>
 
             {/* Elemento observador para scroll infinito de recomendaciones */}
