@@ -6,13 +6,14 @@ import {
   AiOutlineApartment,
   AiOutlineSetting,
 } from "react-icons/ai";
-import { MdOutlineAnalytics, MdLogout } from "react-icons/md";
+import { MdOutlineAnalytics, MdLogout, MdHealthAndSafety } from "react-icons/md";
 import { NavLink } from "react-router-dom";
 import { useContext, useEffect, useState} from "react";
 import { ThemeContext } from "../App";
 import { useAuth } from "../Auth/Auth";
 import { FaCloudUploadAlt } from "react-icons/fa";
 import api from "../Auth/Api";
+import { VscDebugAlt } from "react-icons/vsc";
 
 export function Sidebar() {
   const { setTheme, theme } = useContext(ThemeContext);
@@ -57,12 +58,12 @@ export function Sidebar() {
     },
     {
       label: "Productos",
-      icon: <AiOutlineApartment />,
+      icon: <VscDebugAlt />,
       to: "/productos",
     },
     {
       label: "Diagramas",
-      icon: <MdOutlineAnalytics />,
+      icon: <MdHealthAndSafety />,
       to: "/diagramas",
     },
     {
