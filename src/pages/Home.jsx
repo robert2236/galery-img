@@ -37,8 +37,6 @@ export function Home() {
   const [showRecommendedSection, setShowRecommendedSection] = useState(true);
   const [recommendedImages, setRecommendedImages] = useState([]);
   const { search } = useSearch();
-
-  // Estados para paginación mejorada
   const [imagesPagination, setImagesPagination] = useState({
     page: 1,
     has_next: false,
@@ -58,6 +56,72 @@ export function Home() {
     total: 0,
     total_pages: 0,
   });
+
+  // Agrega este nuevo estado junto con los otros estados existentes:
+const [recommendedImageIndices, setRecommendedImageIndices] = useState({});
+
+// Agrega esta función después de getCurrentUser()
+const handleRecommendedShow = async (img, index) => {
+  // Primero intenta encontrar en imágenes principales
+  const mainIndex = images.findIndex(i => i.image_id === img.image_id);
+  
+  if (mainIndex !== -1) {
+    // Si está en las imágenes principales, usa ese índice
+    handleShow(mainIndex);
+  } else {
+    // Si NO está en las principales, agrega la imagen recomendada al array principal
+    // temporalmente para mostrarla en el modal
+    
+    try {
+      // Cargar datos completos de la imagen recomendada desde el backend
+      const response = await api.get(`/api/images/${img.image_id}`);
+      const fullImageData = {
+        ...response.data,
+        url: img.url || response.data.image_url,
+        id: img.image_id,
+        image_id: img.image_id,
+        liked_by: response.data.liked_by || [],
+        comments: response.data.comments || [],
+        is_recommended: true
+      };
+      
+      // Crear un array temporal con la imagen recomendada
+      const tempImages = [fullImageData];
+      
+      // Usar el índice 0 (ya que es la única imagen en el array temporal)
+      setSelectedImageIndex(0);
+      setShow(true);
+      
+      // Opcional: Actualizar el estado de imágenes temporalmente
+      // Esto permitirá que el modal funcione con todos los datos necesarios
+      setImages(prev => [...prev, fullImageData]);
+      setRatings(prev => [...prev, { stars: 0, count: 0 }]);
+      setFavorites(prev => [...prev, false]);
+      
+    } catch (error) {
+      console.error("Error al cargar imagen recomendada:", error);
+      
+      // Si falla la carga, crear una imagen básica con los datos disponibles
+      const basicImageData = {
+        url: img.url || img,
+        id: img.image_id || img.id,
+        image_id: img.image_id,
+        liked_by: [],
+        comments: [],
+        is_recommended: true
+      };
+      
+      const tempImages = [basicImageData];
+      setSelectedImageIndex(0);
+      setShow(true);
+      
+      // Actualizar estados
+      setImages(prev => [...prev, basicImageData]);
+      setRatings(prev => [...prev, { stars: 0, count: 0 }]);
+      setFavorites(prev => [...prev, false]);
+    }
+  }
+};
 
   // Referencias para observación de scroll
   const observerTarget = useRef(null);
@@ -108,7 +172,7 @@ export function Home() {
 
       // Actualizar estado local inmediatamente
       const newFavorites = [...favorites];
-      newFavorites[index] = !isCurrentlyFavorite;
+      newFavorites[index] = !isCurrentlyFavorite;  
       setFavorites(newFavorites);
     } catch (error) {
       console.error("Error al procesar tu like:", error);
@@ -144,7 +208,7 @@ export function Home() {
         })),
       }));
 
-      if (isLoadMore) {
+      if (isLoadMore) {   
         setImages((prev) => [...prev, ...imageData]);
         setRatings((prev) => [
           ...prev,
@@ -154,7 +218,7 @@ export function Home() {
         // Obtener usuario para actualizar favoritos
         const userData = await getCurrentUser();
         const newFavorites = imageData.map(
-          (img) => userData && Array.isArray(img.liked_by) && img.liked_by.includes(userData.user_id)
+          (img) =>  img.liked_by.includes(userData.user_id)
         );
         setFavorites((prev) => [...prev, ...newFavorites]);
       } else {
@@ -164,7 +228,7 @@ export function Home() {
         // Obtener usuario para inicializar favoritos
         const userData = await getCurrentUser();
         const initialFavorites = imageData.map(
-          (img) => userData && Array.isArray(img.liked_by) && img.liked_by.includes(userData.user_id)
+           (img) =>  img.liked_by.includes(userData.user_id)
         );
         setFavorites(initialFavorites);
       }
@@ -187,7 +251,7 @@ export function Home() {
       setIsLoadingMore(false);
     }
   };
-
+   console.log("ver likes", favorites)
   // Cargar imágenes recomendadas con paginación
   const loadRecommendedImages = async (page = 1, isLoadMore = false) => {
     try {
@@ -684,6 +748,8 @@ export function Home() {
     return <EmptyContainer>No images found</EmptyContainer>;
   }
 
+  console.log("imagenes recomendades",favorites);
+  
   return (
     <Container className="mt-3">
       {/* Sección de imágenes recomendadas */}
@@ -697,17 +763,7 @@ export function Home() {
                 <GalleryItem
                   className="mb-3"
                   key={`recommended-${img.id}-${index}`}
-                  onClick={() => {
-                    // Para imágenes recomendadas, necesitamos encontrar su índice en el array principal
-                    const mainIndex = images.findIndex(i => i.image_id === img.image_id);
-                    if (mainIndex !== -1) {
-                      handleShow(mainIndex);
-                    } else {
-                      // Si no está en las imágenes principales, mostrar la recomendada directamente
-                      // Esto puede requerir lógica adicional si necesitas mostrar el modal con datos completos
-                      console.log("Imagen recomendada no encontrada en imágenes principales");
-                    }
-                  }}
+                  onClick={() => handleRecommendedShow(img, index)}
                 >
                   <img
                     src={img.url || img}
