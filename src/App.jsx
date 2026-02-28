@@ -1,5 +1,5 @@
-import { createContext, useContext, useState,useEffect } from 'react';
-import React from 'react'
+import { createContext, useContext, useState, useEffect } from "react";
+import React from "react";
 import { MyRoutes } from "./routers/routes";
 import { BrowserRouter, useLocation } from "react-router-dom";
 import { Light, Dark } from "./styles/Themes";
@@ -23,14 +23,14 @@ const SearchContext = createContext();
 export const useSearch = () => {
   const context = useContext(SearchContext);
   if (!context) {
-    throw new Error('useSearch debe usarse dentro de un SearchProvider');
+    throw new Error("useSearch debe usarse dentro de un SearchProvider");
   }
   return context;
 };
 
 export const SearchProvider = ({ children }) => {
   const [search, setSearch] = useState("");
-  
+
   return (
     <SearchContext.Provider value={{ search, setSearch }}>
       {children}
@@ -40,19 +40,16 @@ export const SearchProvider = ({ children }) => {
 
 // Componente Layout para rutas que necesitan sidebar
 const Layout = ({ children, sidebarOpen }) => {
-  
   return (
     <SearchProvider>
-    <AppWrapper>
-      <Sidebar sidebarOpen={sidebarOpen} />
-      <ContentWrapper sidebarOpen={sidebarOpen}>
-        <Header  />
-         <MainContent>
-          {children}
-        </MainContent>
-        <MobileFooter />
-      </ContentWrapper>
-    </AppWrapper>
+      <AppWrapper>
+        <Sidebar sidebarOpen={sidebarOpen} />
+        <ContentWrapper sidebarOpen={sidebarOpen}>
+          <Header />
+          <MainContent>{children}</MainContent>
+          <MobileFooter />
+        </ContentWrapper>
+      </AppWrapper>
     </SearchProvider>
   );
 };
@@ -87,7 +84,7 @@ function App() {
         window.location.href = "/login";
       }
       return Promise.reject(error);
-    }
+    },
   );
 
   useEffect(() => {
@@ -128,11 +125,9 @@ const RouterContent = ({ sidebarOpen, setSidebarOpen }) => {
   const location = useLocation();
   // Cambia esta condición para identificar correctamente la página de login
   const isLoginPage =
-    location.pathname === "/" || 
-    location.pathname === "/login" || 
+    location.pathname === "/" ||
+    location.pathname === "/login" ||
     location.pathname === "/register";
-
-
 
   return (
     <>
@@ -161,10 +156,9 @@ const ContentWrapper = styled.div`
   min-width: 0; // Fix para flexbox
   margin-top: 30px;
 
-   @media (max-width: 768px) {
-   margin-left: 0px !important;
-}
-
+  @media (max-width: 768px) {
+    margin-left: 0px !important;
+  }
 `;
 
 export default App;
