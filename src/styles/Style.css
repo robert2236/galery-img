@@ -156,3 +156,156 @@ body.dark-mode .theme-form-control::placeholder {
     display: none !important;
   }
 }
+
+/* ===== Neon Dark Gallery Theme ===== */
+
+.custom-card-neon {
+  border: 1px solid rgba(0, 242, 254, 0.15) !important;
+  box-shadow: 0 0 15px rgba(0, 242, 254, 0.05);
+  transition: all 0.3s ease-in-out;
+}
+
+.custom-card-neon:hover {
+  box-shadow: 0 0 25px rgba(0, 242, 254, 0.25);
+  transform: translateY(-3px);
+}
+
+.custom-card-neon .card-img-neon {
+  object-fit: cover !important;
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+}
+
+.neon-glow-text {
+  color: #00f2fe !important;
+  text-shadow: 0 0 10px rgba(0, 242, 254, 0.3);
+}
+
+.neon-section-title {
+  position: relative;
+  display: inline-block;
+}
+
+.neon-section-title::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #00f2fe, transparent);
+}
+
+/* ===== Dashboard Metrics Theme ===== */
+
+.metrics-card {
+  border: 1px solid rgba(0, 242, 254, 0.12) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.04) !important;
+  backdrop-filter: blur(8px);
+  transition: all 0.3s ease-in-out;
+}
+
+.metrics-card:hover {
+  border-color: rgba(0, 242, 254, 0.3) !important;
+  box-shadow: 0 4px 30px rgba(0, 242, 254, 0.1);
+  transform: translateY(-2px);
+}
+
+.metrics-card .card-body {
+  padding: 1.5rem;
+}
+
+.console-log {
+  background: #0a0a0a !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  min-height: 200px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.console-log .log-entry {
+  color: #c0c0c0;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.console-log .log-entry::before {
+  content: '> ';
+  color: #00f2fe;
+}
+
+.console-log .log-error {
+  color: #ff6b6b;
+}
+
+.console-log .log-error::before {
+  content: '! ';
+  color: #ff6b6b;
+}
+
+.console-log .log-warning {
+  color: #ffd93d;
+}
+
+.console-log .log-warning::before {
+  content: '? ';
+  color: #ffd93d;
+}
+
+.console-log .log-success {
+  color: #6bcf7f;
+}
+
+.console-log .log-success::before {
+  content: '+ ';
+  color: #6bcf7f;
+}
+
+.dashboard-bg {
+  background-color: #12141c;
+  min-height: 100vh;
+}
+
+@media (min-width: 768px) {
+  .dashboard-bg {
+    margin-top: 15px !important;
+  }
+}
+
+.dashboard-tab-btn {
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  color: rgba(255, 255, 255, 0.5) !important;
+  transition: all 0.2s ease;
+}
+
+.dashboard-tab-btn:hover,
+.dashboard-tab-btn.active {
+  background: rgba(0, 242, 254, 0.08) !important;
+  border-color: rgba(0, 242, 254, 0.25) !important;
+  color: #00f2fe !important;
+}
+
+.metric-value-neon {
+  color: #00f2fe;
+  text-shadow: 0 0 20px rgba(0, 242, 254, 0.15);
+}
+
+.dashboard-card-body {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(8px);
+}
+
+.dashboard-chart-card {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 12px;
+}

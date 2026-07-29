@@ -235,14 +235,15 @@ export function Login() {
               <Tooltip id="user-add-tooltip" />
 
               <div>
-                <div className="d-flex justify-content-center align-items-center mb-4">
+                <div className="text-center mb-4">
+                  <img src="/logo.png" alt="Logo" style={{ height: '64px', width: '64px', objectFit: 'contain', display: 'block', margin: '0 auto 12px', background: 'transparent' }} />
                   <h1 style={{
                     fontWeight: "700",
                     fontSize: isMobile ? "1.8rem" : "2.2rem",
                     color: darkMode ? "#ffffff" : "#333333",
                     margin: 0
                   }}>
-                    {isMobile ? "Login" : "Iniciar Sesión"}
+                    {isMobile ? "Login" : "Iniciar Sesi\u00f3n"}
                   </h1>
                 </div>
 

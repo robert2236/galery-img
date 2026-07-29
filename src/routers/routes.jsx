@@ -12,7 +12,7 @@ import { useNavigate, Navigate } from "react-router-dom";
 import { Register } from "../pages/Register";
 
 const PrivateRoute = ({ children }) => {
-  const { auth } = useAuth(); // Asegúrate que useAuth devuelva un objeto con propiedad auth
+  const { auth } = useAuth(); 
   const navigate = useNavigate();
   return auth ? children : <Navigate to="/" replace />;
 };
@@ -26,7 +26,7 @@ export function MyRoutes() {
 
       {/* Rutas privadas */}
       <Route
-        path="/productos"
+        path="/debug"
         element={
           <PrivateRoute>
             <Productos />
@@ -44,7 +44,7 @@ export function MyRoutes() {
       />
 
       <Route
-        path="/diagramas"
+        path="/health"
         element={
           <PrivateRoute>
             <Diagramas />

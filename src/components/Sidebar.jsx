@@ -59,12 +59,12 @@ export function Sidebar() {
     {
       label: "Productos",
       icon: <VscDebugAlt />,
-      to: "/productos",
+      to: "/debug",
     },
     {
       label: "Diagramas",
       icon: <MdHealthAndSafety />,
-      to: "/diagramas",
+      to: "/health",
     },
     {
       label: "Perfil",
@@ -200,6 +200,11 @@ const SidebarContent = styled.div`
 
     &:hover {
       background: ${(props) => props.theme.bg3};
+
+      .Linkicon svg {
+        filter: drop-shadow(0 0 8px rgba(0,242,254,0.9)) drop-shadow(0 0 20px rgba(0,242,254,0.5));
+        transition: filter 0.3s ease;
+      }
     }
 
     .Links {

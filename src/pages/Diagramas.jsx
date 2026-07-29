@@ -1,9 +1,9 @@
 import { MdHealthAndSafety } from "react-icons/md";
 import React, { useState, useEffect } from "react";
-import { Row, Col, Spinner } from "react-bootstrap";
-import styled from "styled-components";
+import { Row, Col } from "react-bootstrap";
 import axios from "axios";
 import { toast } from "react-toastify";
+import LoadingSpinner from "../components/LoadingSpinner";
 
 // Importar iconos disponibles de react-icons/md
 import {
@@ -62,20 +62,20 @@ export function Diagramas() {
 
   const getIconForKey = (key) => {
     const iconMap = {
-      total_images: <MdImage size={20} className="me-2 text-primary" />,
+      total_images: <MdImage size={20} className="me-2 text-info" />,
       images_with_features: (
         <MdCollections size={20} className="me-2 text-info" />
       ),
       images_with_interactions: (
-        <MdTouchApp size={20} className="me-2 text-success" />
+        <MdTouchApp size={20} className="me-2 text-info" />
       ),
       feature_coverage: (
-        <MdTrendingUp size={20} className="me-2 text-warning" />
+        <MdTrendingUp size={20} className="me-2 text-info" />
       ),
       interaction_coverage: (
-        <MdShowChart size={20} className="me-2 text-danger" />
+        <MdShowChart size={20} className="me-2 text-info" />
       ),
-      default: <MdInfo size={20} className="me-2 text-muted" />,
+      default: <MdInfo size={20} className="me-2 text-secondary" />,
     };
 
     return iconMap[key] || iconMap.default;
@@ -84,13 +84,13 @@ export function Diagramas() {
 
   const getHealthIconForKey = (key) => {
     const iconMap = {
-      status: <MdHealthAndSafety size={20} className="me-2 text-primary" />,
+      status: <MdHealthAndSafety size={20} className="me-2 text-info" />,
       database: <MdStorage size={20} className="me-2 text-info" />,
-      graph_nodes: <MdSchema size={20} className="me-2 text-success" />,
-      graph_recommender: <MdSchema size={20} className="me-2 text-warning" />,
-      visual_recommender: <MdVisibility size={20} className="me-2 text-danger" />,
-      total_images: <MdImage size={20} className="me-2 text-primary" />,
-      default: <MdInfo size={20} className="me-2 text-muted" />,
+      graph_nodes: <MdSchema size={20} className="me-2 text-info" />,
+      graph_recommender: <MdSchema size={20} className="me-2 text-info" />,
+      visual_recommender: <MdVisibility size={20} className="me-2 text-info" />,
+      total_images: <MdImage size={20} className="me-2 text-info" />,
+      default: <MdInfo size={20} className="me-2 text-secondary" />,
     };
 
     return iconMap[key] || iconMap.default;
@@ -151,83 +151,73 @@ export function Diagramas() {
   };
 
   return (
-    <Container className="m-4 m-sm-5">
-      <div>
-        <div className="d-flex align-items-center mt-5 mb-2">
-          <MdHealthAndSafety size={25} className="me-2" />
-          <h3 className="mb-0">Estatus del sistema</h3>
+    <div className="dashboard-bg text-light" style={{ margin: '-1rem -2rem', padding: '1.5rem 2rem 80px', minHeight: 'calc(100vh - 30px)' }}>
+      <div className="m-4 m-sm-5">
+        <div className="d-flex align-items-center mt-5 mb-2 w-100">
+          <MdHealthAndSafety size={25} className="me-2 text-info" />
+          <h3 className="text-light mb-0 fw-light" style={{ letterSpacing: '1px' }}>Estatus del sistema</h3>
         </div>
-        <p>
-          Se puede visualizar el estatus general del sistema y parámetros de los
+        <p className="text-secondary" style={{ opacity: 0.7 }}>
+          Se puede visualizar el estatus general del sistema y par&aacute;metros de los
           algoritmos utilizados.
         </p>
       </div>
-      <hr className="mb-5" />
-      <Row className="gap-sm-5 d-flex justify-content-center">
+      <hr className="mb-5 mx-4 mx-sm-5" style={{ borderColor: 'rgba(0,242,254,0.12)', opacity: 0.3 }} />
+      <Row className="gap-sm-5 d-flex justify-content-center mx-3 mx-sm-5">
         <Col
           sm={5} xs={12}
-          className="mb-4 mb-sm-0"
-          style={{ borderRadius: "15px", border: "2px solid #808080" }}
+          className="mb-4 mb-sm-0 p-4 dashboard-chart-card"
         >
           {!loadingConfig && Object.keys(config).length > 0 ? (
-            <div className="p-3 rounded shadow-sm">
-              <h5 className="mb-3">Estado Actual del Sistema</h5>
+            <div className="p-3 rounded shadow-sm" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(0,242,254,0.12)', borderRadius: '12px', backdropFilter: 'blur(8px)' }}>
+              <h5 className="mb-3 text-light" style={{ fontSize: '0.95rem', fontWeight: 600 }}>Estado Actual del Sistema</h5>
               {Object.entries(config).map(([key, value], index, array) => (
                 <React.Fragment key={index}>
                   <div className="d-flex align-items-center mb-2 p-2">
                     {getIconForKey(key)}
                     <div className="d-flex justify-content-between w-100">
-                      <span className="fw-medium">{formatKeyName(key)}:</span>
+                      <span className="fw-medium text-light">{formatKeyName(key)}:</span>
                       <span className={`fw-bold ${getValueClass(key, value)}`}>
                         {formatValue(key, value)}
                       </span>
                     </div>
                   </div>
-                  {index < array.length - 1 && <hr className="my-2" />}
+                  {index < array.length - 1 && <hr className="my-2" style={{ borderColor: 'rgba(255,255,255,0.06)' }} />}
                 </React.Fragment>
               ))}
             </div>
           ) : (
-            <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '300px' }}>
-              <Spinner animation="border" role="status" className="m-5" />
-            </div>
+            <LoadingSpinner />
           )}
         </Col>
-        
 
         <Col
           sm={5} xs={12}
-          style={{ borderRadius: "15px", border: "2px solid #808080" }}
+          className="mb-4 mb-sm-0 p-4 dashboard-chart-card"
         >
           {!loadingHealth && Object.keys(health).length > 0 ? (
-            <div className="p-3 rounded shadow-sm">
-              <h5 className="mb-3">Estado de Salud del Sistema</h5>
+            <div className="p-3 rounded shadow-sm" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(0,242,254,0.12)', borderRadius: '12px', backdropFilter: 'blur(8px)' }}>
+              <h5 className="mb-3 text-light" style={{ fontSize: '0.95rem', fontWeight: 600 }}>Estado de Salud del Sistema</h5>
               {Object.entries(health).map(([key, value], index, array) => (
                 <React.Fragment key={index}>
                   <div className="d-flex align-items-center mb-2 p-2">
                     {getHealthIconForKey(key)}
                     <div className="d-flex justify-content-between w-100">
-                      <span className="fw-medium">{formatHealthKeyName(key)}:</span>
+                      <span className="fw-medium text-light">{formatHealthKeyName(key)}:</span>
                       <span className={`fw-bold ${getValueClass(key, value)}`}>
                         {formatValue(key, value)}
                       </span>
                     </div>
                   </div>
-                  {index < array.length - 1 && <hr className="my-2" />}
+                  {index < array.length - 1 && <hr className="my-2" style={{ borderColor: 'rgba(255,255,255,0.06)' }} />}
                 </React.Fragment>
               ))}
             </div>
           ) : (
-            <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '300px' }}>
-              <Spinner animation="border" role="status" className="m-5" />
-            </div>
+            <LoadingSpinner />
           )}
         </Col>
       </Row>
-    </Container>
+    </div>
   );
 }
-
-const Container = styled.div`
-  height: 100%;
-`;

@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import useMeasure from 'react-use-measure'
 import shuffle from 'lodash.shuffle'
 import data from './data'
 
-// Interfaz para los items
 interface MasonryItem {
   css: string
   height: number
@@ -15,81 +14,76 @@ interface MasonryItem {
 }
 
 function Masonry() {
-  // Hook1: Medir el ancho del contenedor
   const [ref, { width }] = useMeasure()
-  
-  // Hook2: Mantener items
   const [items, setItems] = useState<MasonryItem[]>(data)
-  
-  // Hook3: Calcular columnas basadas en el ancho
+
   const columns = useMemo(() => {
     if (width >= 1500) return 5
     if (width >= 1200) return 4
     if (width >= 900) return 3
     return 2
   }, [width])
-  
-  // Hook4: Mezclar items cada 2 segundos
+
   useEffect(() => {
-    const intervalId = setInterval(() => {
-      setItems(prevItems => shuffle([...prevItems]))
-    }, 2000)
-    
-    return () => clearInterval(intervalId)
+    let intervalId
+
+    const startInterval = () => {
+      intervalId = setInterval(() => {
+        setItems(prevItems => shuffle([...prevItems]))
+      }, 5000)
+    }
+
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        clearInterval(intervalId)
+      } else {
+        startInterval()
+      }
+    }
+
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    startInterval()
+
+    return () => {
+      clearInterval(intervalId)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+    }
   }, [])
-  
-  // Hook5: Calcular posiciones ESCALONADAS (staggered)
+
+  const rotations = useMemo(
+    () => items.map(() => Math.random() * 4 - 2),
+    [items]
+  )
+
   const [heights, gridItems] = useMemo(() => {
     if (width === 0) return [[], []]
-    
-    // TAMAÑO FIJO PARA TODAS LAS IMÁGENES
+
     const fixedWidth = width / columns
-    const fixedHeight = 280 // Más alto que antes
-    
-    // Calcular cuántas filas necesitamos aproximadamente
-    const itemsPerColumn = Math.ceil(items.length / columns)
-    const estimatedHeight = itemsPerColumn * fixedHeight
-    
-    const gridItems: Array<MasonryItem & { 
-      x: number; 
-      y: number; 
-      width: number; 
-      height: number; 
+    const fixedHeight = 280
+
+    const gridItems: Array<MasonryItem & {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
       column: number;
       row: number;
     }> = []
-    
-    // Array para trackear alturas por columna
+
     const columnHeights: number[] = new Array(columns).fill(0)
-    
-    // Crear patrón escalonado
+
     items.forEach((item, index) => {
-      // Alternar entre columnas de manera cíclica
       const column = index % columns
-      
-      // Calcular desplazamiento vertical aleatorio/alternado
-      let verticalOffset = 0
-      
-      // Opción 1: Desplazamiento fijo por columna (patrón escalonado)
-      if (column === 1 || column === 3) {
-        verticalOffset = fixedHeight * 0.5 // Columna 1 y 3 desplazadas hacia abajo
-      }
-      
-      // Opción 2: Desplazamiento más variado (mejor visualmente)
+
       const offsetPattern = [0, fixedHeight * 0.3, fixedHeight * 0.6, fixedHeight * 0.2, fixedHeight * 0.8]
-      verticalOffset = offsetPattern[column % offsetPattern.length]
-      
-      // Opción 3: Desplazamiento aleatorio (más orgánico)
-      // verticalOffset = Math.random() * fixedHeight * 0.7
-      
-      // Calcular posición
+      const verticalOffset = offsetPattern[column % offsetPattern.length]
+
       const x = column * fixedWidth
       const y = columnHeights[column] + verticalOffset
       const row = Math.floor(y / fixedHeight)
-      
-      // Actualizar altura de la columna
+
       columnHeights[column] = Math.max(columnHeights[column], y + fixedHeight)
-      
+
       gridItems.push({
         ...item,
         x,
@@ -100,21 +94,20 @@ function Masonry() {
         row
       })
     })
-    
+
     return [columnHeights, gridItems]
   }, [columns, items, width])
-  
-  // Si no hay ancho, mostrar mensaje de carga
+
   if (width === 0) {
     return (
       <div ref={ref} style={{ width: '100%', height: '600px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div>Cargando masonry...</div>
+        <div style={{ color: '#888', fontSize: '1.1rem' }}>Cargando galería...</div>
       </div>
     )
   }
-  
+
   return (
-    <div 
+    <div
       ref={ref}
       style={{
         position: 'relative',
@@ -134,8 +127,8 @@ function Masonry() {
             height: item.height,
             padding: '6px',
             boxSizing: 'border-box',
-            transition: 'all 0.5s ease-in-out',
-            zIndex: item.row // Para orden de superposición
+            transition: 'all 0.3s ease-in-out',
+            zIndex: item.row
           }}
         >
           <div
@@ -150,7 +143,7 @@ function Masonry() {
               boxShadow: '0px 10px 30px -10px rgba(0, 0, 0, 0.3)',
               transition: 'all 0.3s ease',
               cursor: 'pointer',
-              transform: `rotate(${Math.random() * 4 - 2}deg)` // Rotación sutil aleatoria
+              transform: `rotate(${rotations[index]}deg)`
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = `rotate(0deg) scale(1.05)`
@@ -158,7 +151,7 @@ function Masonry() {
               e.currentTarget.style.zIndex = '100'
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.transform = `rotate(${Math.random() * 4 - 2}deg) scale(1)`
+              e.currentTarget.style.transform = `rotate(${rotations[index]}deg) scale(1)`
               e.currentTarget.style.boxShadow = '0px 10px 30px -10px rgba(0, 0, 0, 0.3)'
               e.currentTarget.style.zIndex = item.row.toString()
             }}

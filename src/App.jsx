@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useMemo, useRef } from "react";
 import React from "react";
 import { MyRoutes } from "./routers/routes";
 import { BrowserRouter, useLocation } from "react-router-dom";
@@ -11,7 +11,7 @@ import "./styles/Style.css";
 import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
 import AuthProvider from "./Auth/Auth";
-import { ToastContainer, toast } from "react-toastify";
+import { ToastContainer } from "react-toastify";
 import MobileFooter from "./components/Footer";
 
 import AOS from "aos";
@@ -31,8 +31,10 @@ export const useSearch = () => {
 export const SearchProvider = ({ children }) => {
   const [search, setSearch] = useState("");
 
+  const value = useMemo(() => ({ search, setSearch }), [search]);
+
   return (
-    <SearchContext.Provider value={{ search, setSearch }}>
+    <SearchContext.Provider value={value}>
       {children}
     </SearchContext.Provider>
   );
@@ -69,32 +71,42 @@ function App() {
   const [theme, setTheme] = useState("dark");
   const themeStyle = theme === "light" ? Light : Dark;
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const interceptorId = useRef(null);
 
   useEffect(() => {
     AOS.init();
+    return () => AOS.refresh();
   }, []);
 
   axios.defaults.baseURL = import.meta.env.VITE_API_URL;
 
-  axios.interceptors.response.use(
-    (response) => response,
-    (error) => {
-      const { response } = error;
-      if (response && response.status === 401) {
-        window.location.href = "/login";
-      }
-      return Promise.reject(error);
-    },
-  );
+  useEffect(() => {
+    interceptorId.current = axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        const { response } = error;
+        if (response && response.status === 401) {
+          window.location.href = "/login";
+        }
+        return Promise.reject(error);
+      },
+    );
+
+    return () => {
+      axios.interceptors.response.eject(interceptorId.current);
+    };
+  }, []);
 
   useEffect(() => {
     document.body.style.color = themeStyle.text;
     document.body.style.backgroundColor = themeStyle.bgtotal;
   }, [theme, themeStyle]);
 
+  const themeContextValue = useMemo(() => ({ setTheme, theme }), [theme]);
+
   return (
     <AuthProvider>
-      <ThemeContext.Provider value={{ setTheme, theme }}>
+      <ThemeContext.Provider value={themeContextValue}>
         <ThemeProvider theme={themeStyle}>
           <BrowserRouter>
             <ToastContainer

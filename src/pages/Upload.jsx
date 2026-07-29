@@ -1,7 +1,6 @@
-import styled from "styled-components";
 import React, { useState, useRef, useEffect } from "react";
 import { Row, Col, Form } from "react-bootstrap";
-import { FaCloudUploadAlt } from "react-icons/fa";
+import { FaCloudUploadAlt, FaTrashAlt } from "react-icons/fa";
 import AsyncSelect from "react-select/async";
 import axios from "axios";
 import upload from "../images/upload.svg";
@@ -170,25 +169,26 @@ export function Upload() {
   };
 
   return (
-    <Container className="m-4 m-sm-5">
-      <div className="d-flex align-items-center mt-5">
-        <FaCloudUploadAlt size={28} className="me-2" />
-        <h3>Subir imagen</h3>
-      </div>
-      <hr className="mb-5" />
+    <div className="dashboard-bg text-light" style={{ margin: '-1rem -2rem', padding: '1.5rem 2rem 80px', minHeight: 'calc(100vh - 30px)' }}>
+      <div className="m-4 m-sm-5">
+        <div className="d-flex align-items-center mt-5 w-100">
+          <FaCloudUploadAlt size={28} className="me-2 text-info" />
+          <h3 className="text-light fw-light mb-0" style={{ letterSpacing: '1px' }}>Subir imagen</h3>
+        </div>
+        <hr className="mb-5" style={{ borderColor: 'rgba(0,242,254,0.12)', opacity: 0.3 }} />
       <Row
         className="p-sm-5 p-2 mb-3 d-flex justify-content-center gap-lg-5"
-        style={{ borderRadius: "15px", border: "2px solid #808080" }}
+        style={{ borderRadius: '15px', border: '1px solid rgba(0,242,254,0.12)', background: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(8px)' }}
       >
         <Col xs={12} lg={6}>
           <form onSubmit={handleSubmit(uploadFile)}>
             <div>
               <Form.Group className="mb-3">
-                <Form.Label>Título</Form.Label>
-                <Form.Control {...register("title")} type="text" />
+                <Form.Label className="text-light fw-semibold small">T&iacute;tulo</Form.Label>
+                <Form.Control {...register("title")} type="text" className="bg-dark text-light border-secondary" style={{ borderColor: 'rgba(0,242,254,0.15) !important' }} />
               </Form.Group>
               <Form.Group className="mb-3">
-                <Form.Label>Categoria</Form.Label>
+                <Form.Label className="text-light fw-semibold small">Categoria</Form.Label>
                 <AsyncSelect
                   cacheOptions
                   defaultOptions
@@ -204,47 +204,55 @@ export function Upload() {
                     control: (base) => ({
                       ...base,
                       borderRadius: "8px",
-                      color: "#0000",
-                      border: "2px solid #0000",
+                      backgroundColor: "#1a1d27",
+                      borderColor: "rgba(0,242,254,0.15)",
+                      color: "#fff",
                       "&:hover": {
-                        borderColor: "#0000",
+                        borderColor: "rgba(0,242,254,0.3)",
                       },
+                    }),
+                    menu: (base) => ({
+                      ...base,
+                      backgroundColor: "#1a1d27",
+                      border: "1px solid rgba(0,242,254,0.12)",
+                    }),
+                    option: (base, state) => ({
+                      ...base,
+                      backgroundColor: state.isFocused ? "rgba(0,242,254,0.1)" : "transparent",
+                      color: "#fff",
+                      "&:hover": {
+                        backgroundColor: "rgba(0,242,254,0.15)",
+                      },
+                    }),
+                    singleValue: (base) => ({
+                      ...base,
+                      color: "#fff",
+                    }),
+                    input: (base) => ({
+                      ...base,
+                      color: "#fff",
+                    }),
+                    placeholder: (base) => ({
+                      ...base,
+                      color: "rgba(255,255,255,0.4)",
                     }),
                   }}
                 />
               </Form.Group>
             </div>
 
-            <div className="d-flex flex-row gap-4 justify-content-center mt-4">
-              <button
-                style={{
-                  padding: "8px 15px",
-                  backgroundColor: "#198754",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "20px",
-                  cursor: "pointer",
-                  fontSize: "12px",
-                }}
-                type="submit"
-              >
-                <FaCloudUploadAlt size={20} className="me-2" />
+            <div className="d-flex flex-row gap-3 justify-content-center mt-4">
+              <button className="btn btn-outline-info rounded-pill px-4 d-flex align-items-center gap-1" type="submit">
+                <FaCloudUploadAlt size={18} />
                 Subir imagen
               </button>
               <button
+                className="btn btn-outline-secondary rounded-pill px-4 d-flex align-items-center gap-1"
                 type="button" 
                 onClick={clearFile}
-                style={{
-                  padding: "8px 15px",
-                  backgroundColor: "#dc3545",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "20px",
-                  cursor: "pointer",
-                  fontSize: "12px",
-                }}
               >
-                🗑️ Limpiar
+                <FaTrashAlt size={14} />
+                Limpiar
               </button>
             </div>
           </form>
@@ -254,29 +262,31 @@ export function Upload() {
               style={{
                 marginTop: "20px",
                 padding: "15px",
-                backgroundColor: "#f8f9fa",
-                borderRadius: "10px",
-                border: "1px solid #e9ecef",
+                background: "rgba(255,255,255,0.03)",
+                borderRadius: "12px",
+                border: "1px solid rgba(255,255,255,0.06)",
+                backdropFilter: "blur(8px)",
               }}
             >
-              <h4 style={{ margin: "0 0 10px 0", color: "#495057" }}>
-                📊 Información del archivo:
+              <h4 style={{ margin: "0 0 10px 0", color: "#00f2fe", fontSize: "1rem", fontWeight: 600 }}>
+                Informaci&oacute;n del archivo:
               </h4>
               <div
                 style={{
                   display: "grid",
                   gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
                   gap: "10px",
+                  color: "#c0c0c0",
                 }}
               >
                 <div>
-                  <strong>Nombre:</strong> {fileName}
+                  <strong style={{ color: "#e0e0e0" }}>Nombre:</strong> {fileName}
                 </div>
                 <div>
-                  <strong>Tipo:</strong> {fileType || "Desconocido"}
+                  <strong style={{ color: "#e0e0e0" }}>Tipo:</strong> {fileType || "Desconocido"}
                 </div>
                 <div>
-                  <strong>Tamaño :</strong>{" "}
+                  <strong style={{ color: "#e0e0e0" }}>Tama&ntilde;o:</strong>{" "}
                   {Math.round(base64String.length / 1024)} KB
                 </div>
               </div>
@@ -297,10 +307,10 @@ export function Upload() {
               style={{
                 borderRadius: "15px",
                 border: isDragging
-                  ? "2px dashed #007bff"
+                  ? "2px dashed #00f2fe"
                   : base64String
-                  ? "2px solid #28a745"
-                  : "2px dashed #808080",
+                  ? "2px solid #6bcf7f"
+                  : "2px dashed rgba(0,242,254,0.2)",
                 height: "auto",
                 display: "flex",
                 width: "100%",
@@ -308,10 +318,10 @@ export function Upload() {
                 alignItems: "center",
                 justifyContent: "center",
                 backgroundColor: isDragging
-                  ? "#f0f8ff"
+                  ? "rgba(0,242,254,0.05)"
                   : base64String
-                  ? "#f8f9fa"
-                  : "#f9f9f9",
+                  ? "rgba(255,255,255,0.03)"
+                  : "rgba(255,255,255,0.02)",
                 cursor: base64String ? "default" : "pointer",
                 transition: "all 0.3s ease",
                 textAlign: "center",
@@ -348,22 +358,23 @@ export function Upload() {
                       }}
                     />
                   ) : (
-                    <div
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        overflow: "auto",
-                        backgroundColor: "#f5f5f5",
-                        borderRadius: "10px",
-                        textAlign: "left",
-                      }}
-                    >
-                      <pre
+                      <div
                         style={{
-                          margin: 0,
-                          whiteSpace: "pre-wrap",
-                          wordBreak: "break-word",
+                          width: "100%",
+                          height: "100%",
+                          overflow: "auto",
+                          backgroundColor: "#0a0a0a",
+                          borderRadius: "10px",
+                          textAlign: "left",
                         }}
+                      >
+                        <pre
+                          style={{
+                            margin: 0,
+                            whiteSpace: "pre-wrap",
+                            wordBreak: "break-word",
+                            color: "#c0c0c0",
+                          }}
                       >
                         {atob(base64String.split(",")[1]).substring(0, 1000)}
                         {atob(base64String.split(",")[1]).length > 1000 &&
@@ -378,11 +389,11 @@ export function Upload() {
                     style={{
                       fontSize: "64px",
                       marginBottom: "20px",
-                      color: "#6c757d",
+                      color: "rgba(255,255,255,0.15)",
                     }}
                   >
                     <img
-                      style={{ width: "80px", height: "80px" }}
+                      style={{ width: "80px", height: "80px", opacity: 0.5 }}
                       src={upload}
                       alt=""
                     />
@@ -390,7 +401,7 @@ export function Upload() {
                   <p
                     style={{
                       fontSize: "18px",
-                      color: "#666",
+                      color: "rgba(255,255,255,0.4)",
                       marginBottom: "10px",
                       padding: "20px",
                       fontWeight: "bold",
@@ -406,9 +417,7 @@ export function Upload() {
           </div>
         </Col>
       </Row>
-    </Container>
+      </div>
+    </div>
   );
 }
-const Container = styled.div`
-  height: auto;
-`;

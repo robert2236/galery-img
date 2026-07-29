@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import React, { useState, useRef, useEffect, useContext } from "react";
+import React, { useState, useRef, useEffect, useContext, useCallback, useMemo } from "react";
 import { Modal, Carousel } from "react-bootstrap";
 import {
   FaStar,
@@ -15,13 +15,44 @@ import axios from "axios";
 import api from "../Auth/Api";
 import { useSearch } from "../App";
 import { ThemeContext } from "../App";
+import GalleryCard from "../components/GalleryCard";
+import SkeletonGrid from "../components/SkeletonGrid";
+import LoadingSpinner from "../components/LoadingSpinner";
+import EmptyState from "../components/EmptyState";
+import ErrorState from "../components/ErrorState";
 
 const USE_LOCAL_IMAGES = false; 
+
+const StarRating = ({ rating, onRate }) => {
+  const stars = [];
+  const fullStars = Math.round(rating);
+
+  for (let i = 1; i <= 5; i++) {
+    if (i <= fullStars) {
+      stars.push(
+        <FaStar
+          key={i}
+          onClick={() => onRate(i)}
+          style={{ color: "#ffc107", cursor: "pointer", fontSize: "1.5rem" }}
+        />
+      );
+    } else {
+      stars.push(
+        <FaRegStar
+          key={i}
+          onClick={() => onRate(i)}
+          style={{ color: "#ffc107", cursor: "pointer", fontSize: "1.5rem" }}
+        />
+      );
+    }
+  }
+
+  return <div style={{ display: "flex", gap: "5px" }}>{stars}</div>;
+};
 
 export function Home() {
   const [images, setImages] = useState([]);
   const [isLoading, setIsLoading] = useState(!USE_LOCAL_IMAGES);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState(null);
   const [ratings, setRatings] = useState([]);
   const [favorites, setFavorites] = useState([]);
@@ -37,28 +68,7 @@ export function Home() {
   const [showRecommendedSection, setShowRecommendedSection] = useState(true);
   const [recommendedImages, setRecommendedImages] = useState([]);
   const { search } = useSearch();
-  const [imagesPagination, setImagesPagination] = useState({
-    page: 1,
-    has_next: false,
-    has_prev: false,
-    next_page: null,
-    prev_page: null,
-    total: 0,
-    total_pages: 0,
-  });
-
-  const [recommendedPagination, setRecommendedPagination] = useState({
-    page: 1,
-    has_next: false,
-    has_prev: false,
-    next_page: null,
-    prev_page: null,
-    total: 0,
-    total_pages: 0,
-  });
-
-  // Agrega este nuevo estado junto con los otros estados existentes:
-const [recommendedImageIndices, setRecommendedImageIndices] = useState({});
+  const [recommendedLikedStatus, setRecommendedLikedStatus] = useState({});
 
 // Agrega esta función después de getCurrentUser()
 const handleRecommendedShow = async (img, index) => {
@@ -123,9 +133,7 @@ const handleRecommendedShow = async (img, index) => {
   }
 };
 
-  // Referencias para observación de scroll
-  const observerTarget = useRef(null);
-  const recommendedObserverTarget = useRef(null);
+
 
   const [zoomState, setZoomState] = useState({
     scale: 1,
@@ -147,11 +155,14 @@ const handleRecommendedShow = async (img, index) => {
     }
   };
 
-  const sendInteraction = async (imageId, action, index) => {
-    const isCurrentlyFavorite = favorites[index];
+  const favoritesRef = useRef(favorites);
+  favoritesRef.current = favorites;
+
+  const sendInteraction = useCallback(async (imageId, index) => {
+    const isCurrentlyFavorite = favoritesRef.current[index];
 
     try {
-      if (!USE_LOCAL_IMAGES && action === "likes") {
+      if (!USE_LOCAL_IMAGES) {
         if (isCurrentlyFavorite) {
           await api.delete(`/api/images/${imageId}/likes/${currentUser.user_id}`);
         } else {
@@ -170,96 +181,109 @@ const handleRecommendedShow = async (img, index) => {
         }
       }
 
-      // Actualizar estado local inmediatamente
-      const newFavorites = [...favorites];
-      newFavorites[index] = !isCurrentlyFavorite;  
-      setFavorites(newFavorites);
+      setFavorites(prev => {
+        const updated = [...prev];
+        updated[index] = !prev[index];
+        return updated;
+      });
     } catch (error) {
       console.error("Error al procesar tu like:", error);
       toast.error("Error al procesar tu like");
     }
-  };
+  }, [currentUser]);
 
-  // Cargar imágenes normales con paginación
-  const loadImages = async (page = 1, isLoadMore = false) => {
-    if (isLoadMore) {
-      setIsLoadingMore(true);
-    } else {
-      setIsLoading(true);
-    }
+  const recommendedLikedRef = useRef(recommendedLikedStatus);
+  recommendedLikedRef.current = recommendedLikedStatus;
+
+  const sendRecommendedInteraction = useCallback(async (img) => {
+    const isCurrentlyFavorite = recommendedLikedRef.current[img.image_id] || false;
 
     try {
-      const response = await api.get(
-        `/api/images/search?q=${search}&page=${page}&limit=20`
-      );
-      const imageData = response.data.results.map((img) => ({
-        url: img.image_url,
-        id: img.image_id || img._id || Math.random().toString(36).substr(2, 9),
-        image_id: img.image_id,
-        liked_by: img.liked_by || [],
-        comments: (img.comments || []).map((comment) => ({
-          id: comment.comment_id,
-          userId: comment.user_id,
-          text: comment.comment,
-          createdAt: comment.created_at,
-          parentCommentId: comment.parent_comment_id,
-          likes: comment.likes,
-          replies: comment.replies || [],
-        })),
-      }));
-
-      if (isLoadMore) {   
-        setImages((prev) => [...prev, ...imageData]);
-        setRatings((prev) => [
-          ...prev,
-          ...Array(imageData.length).fill({ stars: 0, count: 0 }),
-        ]);
-
-        // Obtener usuario para actualizar favoritos
-        const userData = await getCurrentUser();
-        const newFavorites = imageData.map(
-          (img) =>  img.liked_by.includes(userData.user_id)
-        );
-        setFavorites((prev) => [...prev, ...newFavorites]);
-      } else {
-        setImages(imageData);
-        setRatings(Array(imageData.length).fill({ stars: 0, count: 0 }));
-
-        // Obtener usuario para inicializar favoritos
-        const userData = await getCurrentUser();
-        const initialFavorites = imageData.map(
-           (img) =>  img.liked_by.includes(userData.user_id)
-        );
-        setFavorites(initialFavorites);
+      if (!USE_LOCAL_IMAGES) {
+        if (isCurrentlyFavorite) {
+          await api.delete(`/api/images/${img.id}/likes/${currentUser?.user_id}`);
+        } else {
+          await api.put(
+            `/api/images/${img.id}/interactions/${currentUser?.user_id}`,
+            {
+              action: "likes",
+              increment: 1,
+            },
+            {
+              headers: {
+                "Content-Type": "application/json",
+              },
+            }
+          );
+        }
       }
 
-      // Actualizar estado de paginación con la respuesta del servidor
-      setImagesPagination({
-        page: response.data.page || page,
-        has_next: response.data.has_next || false,
-        has_prev: response.data.has_prev || false,
-        next_page: response.data.next_page || null,
-        prev_page: response.data.prev_page || null,
-        total: response.data.total || 0,
-        total_pages: response.data.total_pages || 0,
-      });
+      setRecommendedLikedStatus((prev) => ({
+        ...prev,
+        [img.image_id]: !prev[img.image_id],
+      }));
+    } catch (error) {
+      console.error("Error al procesar tu like en recomendada:", error);
+      toast.error("Error al procesar tu like");
+    }
+  }, [currentUser]);
+
+  const loadImages = async () => {
+    setIsLoading(true);
+
+    try {
+      let allImages = [];
+      let page = 1;
+      let hasMore = true;
+
+      while (hasMore) {
+        const response = await api.get(
+          `/api/images/search?q=${search}&page=${page}&limit=100`
+        );
+        const results = response.data.results || [];
+        const imageData = results.map((img) => ({
+          url: img.image_url,
+          id: img.image_id || img._id || Math.random().toString(36).substr(2, 9),
+          image_id: img.image_id,
+          liked_by: img.liked_by || [],
+          comments: (img.comments || []).map((comment) => ({
+            id: comment.comment_id,
+            userId: comment.user_id,
+            text: comment.comment,
+            createdAt: comment.created_at,
+            parentCommentId: comment.parent_comment_id,
+            likes: comment.likes,
+            replies: comment.replies || [],
+          })),
+        }));
+
+        allImages = [...allImages, ...imageData];
+        hasMore = response.data.has_next || results.length >= 100;
+        page++;
+      }
+
+      setImages(allImages);
+      setRatings(Array(allImages.length).fill({ stars: 0, count: 0 }));
+
+      const userData = await getCurrentUser();
+      const initialFavorites = allImages.map(
+         (img) => userData && userData.user_id ? img.liked_by.some((id) => String(id) === String(userData.user_id)) : false
+      );
+      setFavorites(initialFavorites);
     } catch (err) {
       setError(err.message);
       toast.error("Error loading images");
     } finally {
       setIsLoading(false);
-      setIsLoadingMore(false);
     }
   };
-   console.log("ver likes", favorites)
-  // Cargar imágenes recomendadas con paginación
-  const loadRecommendedImages = async (page = 1, isLoadMore = false) => {
+  const loadRecommendedImages = async () => {
     try {
       const userData = await getCurrentUser();
 
       if (userData && userData.user_id) {
         const recommendationsResponse = await api.get(
-          `/api/recommend/${userData.user_id}?page=${page}&limit=10`
+          `/api/recommend/${userData.user_id}?page=1&limit=10`
         );
 
         // Verificar la estructura de la respuesta
@@ -280,24 +304,33 @@ const handleRecommendedShow = async (img, index) => {
             id: rec.image_id || Math.random().toString(36).substr(2, 9),
             image_id: rec.image_id,
             is_recommended: true, // Marcar como recomendada
+            liked_by: rec.liked_by || [],
           }));
 
-          if (isLoadMore) {
-            setRecommendedImages((prev) => [...prev, ...formattedRecommendations]);
-          } else {
-            setRecommendedImages(formattedRecommendations);
-          }
+          const initialRecLikedStatus = {};
+          formattedRecommendations.forEach((rec) => {
+            initialRecLikedStatus[rec.image_id] = userData && userData.user_id ? rec.liked_by.some((id) => String(id) === String(userData.user_id)) : false;
+          });
 
-          // Actualizar estado de paginación
-          const paginationData = recommendationsResponse.data.pagination || {};
-          setRecommendedPagination({
-            page: paginationData.page || page,
-            has_next: paginationData.page < paginationData.pages,
-            has_prev: paginationData.page > 1,
-            next_page: paginationData.page < paginationData.pages ? paginationData.page + 1 : null,
-            prev_page: paginationData.page > 1 ? paginationData.page - 1 : null,
-            total: paginationData.total || 0,
-            total_pages: paginationData.pages || 0,
+          setRecommendedImages(formattedRecommendations);
+          setRecommendedLikedStatus(initialRecLikedStatus);
+
+          formattedRecommendations.forEach(async (rec) => {
+            try {
+              if (userData && userData.user_id) {
+                const detailResponse = await api.get(`/api/images/${rec.image_id}`);
+                const fullLikedBy = detailResponse.data.liked_by || [];
+                const isLiked = fullLikedBy.some((id) => String(id) === String(userData.user_id));
+                if (isLiked) {
+                  setRecommendedLikedStatus((prev) => ({
+                    ...prev,
+                    [rec.image_id]: true
+                  }));
+                }
+              }
+            } catch (error) {
+              console.log("Error loading detail for recommended image:", error);
+            }
           });
 
           setShowRecommendedSection(true);
@@ -324,82 +357,10 @@ const handleRecommendedShow = async (img, index) => {
       setRatings(Array(localImages.length).fill({ stars: 0, count: 0 }));
       setFavorites(Array(localImages.length).fill(false));
     } else {
-      // Cargar imágenes y recomendaciones
-      await loadImages(1, false);
-      await loadRecommendedImages(1, false);
+      await loadImages();
+      await loadRecommendedImages();
     }
   };
-
-  // Cargar más imágenes (scroll infinito)
-  const loadMoreImages = async () => {
-    if (isLoadingMore || !imagesPagination.has_next) return;
-
-    const nextPage = imagesPagination.next_page || imagesPagination.page + 1;
-    await loadImages(nextPage, true);
-  };
-
-  // Cargar más recomendaciones (scroll infinito)
-  const loadMoreRecommended = async () => {
-    if (isLoadingMore || !recommendedPagination.has_next) return;
-
-    const nextPage =
-      recommendedPagination.next_page || recommendedPagination.page + 1;
-    await loadRecommendedImages(nextPage, true);
-  };
-
-  // Configurar Intersection Observer para scroll infinito de imágenes normales
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (
-          entries[0].isIntersecting &&
-          imagesPagination.has_next &&
-          !isLoadingMore &&
-          !search
-        ) {
-          loadMoreImages();
-        }
-      },
-      { threshold: 1.0 }
-    );
-
-    if (observerTarget.current) {
-      observer.observe(observerTarget.current);
-    }
-
-    return () => {
-      if (observerTarget.current) {
-        observer.unobserve(observerTarget.current);
-      }
-    };
-  }, [imagesPagination.has_next, isLoadingMore, search]);
-
-  // Configurar Intersection Observer para scroll infinito de recomendaciones
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (
-          entries[0].isIntersecting &&
-          recommendedPagination.has_next &&
-          !isLoadingMore &&
-          !search
-        ) {
-          loadMoreRecommended();
-        }
-      },
-      { threshold: 1.0 }
-    );
-
-    if (recommendedObserverTarget.current) {
-      observer.observe(recommendedObserverTarget.current);
-    }
-
-    return () => {
-      if (recommendedObserverTarget.current) {
-        observer.unobserve(recommendedObserverTarget.current);
-      }
-    };
-  }, [recommendedPagination.has_next, isLoadingMore, search]);
 
   // Cargar datos cuando cambia la búsqueda
   useEffect(() => {
@@ -439,28 +400,35 @@ const handleRecommendedShow = async (img, index) => {
   }, [selectedImageIndex, show]);
 
   // Función para cargar comentarios de una imagen
-  const fetchComments = async (imageId) => {
+  const fetchComments = async (imageId, signal) => {
     if (USE_LOCAL_IMAGES) return;
 
     try {
-      const response = await api.get(`/api/images/${imageId}/comments`);
+      const response = await api.get(`/api/images/${imageId}/comments`, { signal });
+      if (signal?.aborted) return;
       setImageComments((prev) => ({
         ...prev,
         [imageId]: response.data,
       }));
     } catch (error) {
-      console.error("Error al cargar comentarios:", error);
+      if (error.name !== "CanceledError" && error.name !== "AbortError") {
+        console.error("Error al cargar comentarios:", error);
+      }
     }
   };
 
   // Cargar comentarios cuando se abre el modal y se selecciona una imagen
   useEffect(() => {
-    if (show && !USE_LOCAL_IMAGES) {
-      const imageId = images[selectedImageIndex]?.id;
-      if (imageId) {
-        fetchComments(imageId);
-      }
+    if (!show || USE_LOCAL_IMAGES) return;
+
+    const abortController = new AbortController();
+
+    const imageId = images[selectedImageIndex]?.id;
+    if (imageId) {
+      fetchComments(imageId, abortController.signal);
     }
+
+    return () => abortController.abort();
   }, [show, selectedImageIndex, images]);
 
   const handleExpand = () => {
@@ -475,17 +443,17 @@ const handleRecommendedShow = async (img, index) => {
     }
   };
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setShow(false);
     setShowRating(false);
     setIsExpanded(false);
     setShowComments(false);
-  };
+  }, []);
 
-  const handleShow = (index) => {
+  const handleShow = useCallback((_imageId, index) => {
     setSelectedImageIndex(index);
     setShow(true);
-  };
+  }, []);
 
   const handleCommentSubmit = async () => {
     if (!commentText.trim() || isSubmittingComment) return;
@@ -655,241 +623,162 @@ const handleRecommendedShow = async (img, index) => {
     }
   };
 
-  const StarRating = ({ rating, onRate }) => {
-    const stars = [];
-    const fullStars = Math.round(rating);
+  const isDraggingRef = useRef(false);
+  const zoomStateRef = useRef(zoomState);
+  zoomStateRef.current = zoomState;
 
-    for (let i = 1; i <= 5; i++) {
-      if (i <= fullStars) {
-        stars.push(
-          <FaStar
-            key={i}
-            onClick={() => onRate(i)}
-            style={{ color: "#ffc107", cursor: "pointer", fontSize: "1.5rem" }}
-          />
-        );
-      } else {
-        stars.push(
-          <FaRegStar
-            key={i}
-            onClick={() => onRate(i)}
-            style={{ color: "#ffc107", cursor: "pointer", fontSize: "1.5rem" }}
-          />
-        );
-      }
-    }
-
-    return <div style={{ display: "flex", gap: "5px" }}>{stars}</div>;
-  };
-
-  const handleWheel = (e) => {
-    if (!isExpanded) return;
-
+  const handleWheel = useCallback((e) => {
     e.preventDefault();
     const delta = -e.deltaY;
-    const newScale = zoomState.scale + delta * 0.001;
+    const newScale = zoomStateRef.current.scale + delta * 0.001;
     setZoomState((prev) => ({
       ...prev,
       scale: Math.max(1, Math.min(newScale, 3)),
     }));
-  };
+  }, []);
 
-  const handleMouseDown = (e) => {
-    if (!isExpanded || zoomState.scale === 1) return;
+  const handleMouseDown = useCallback((e) => {
+    setZoomState((prev) => {
+      if (prev.scale === 1) return prev;
+      isDraggingRef.current = true;
+      return {
+        ...prev,
+        isDragging: true,
+        startPos: {
+          x: e.clientX - prev.position.x,
+          y: e.clientY - prev.position.y,
+        },
+      };
+    });
+  }, []);
 
-    setZoomState((prev) => ({
-      ...prev,
-      isDragging: true,
-      startPos: {
-        x: e.clientX - prev.position.x,
-        y: e.clientY - prev.position.y,
-      },
-    }));
-  };
+  useEffect(() => {
+    if (!isExpanded) {
+      isDraggingRef.current = false;
+      return;
+    }
 
-  const handleMouseMove = (e) => {
-    if (!zoomState.isDragging || !isExpanded || zoomState.scale === 1) return;
+    const handleMouseMove = (e) => {
+      if (!isDraggingRef.current) return;
+      setZoomState((prev) => {
+        if (!prev.isDragging) return prev;
+        return {
+          ...prev,
+          position: {
+            x: e.clientX - prev.startPos.x,
+            y: e.clientY - prev.startPos.y,
+          },
+        };
+      });
+    };
 
-    setZoomState((prev) => ({
-      ...prev,
-      position: {
-        x: e.clientX - prev.startPos.x,
-        y: e.clientY - prev.startPos.y,
-      },
-    }));
-  };
+    const handleMouseUp = () => {
+      isDraggingRef.current = false;
+      setZoomState((prev) => ({
+        ...prev,
+        isDragging: false,
+      }));
+    };
 
-  const handleMouseUp = () => {
-    setZoomState((prev) => ({
-      ...prev,
-      isDragging: false,
-    }));
-  };
+    const handleWheelDoc = (e) => {
+      handleWheel(e);
+    };
 
-  const handleDoubleClick = () => {
-    if (!isExpanded) return;
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setIsExpanded(false);
+      }
+    };
 
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    document.addEventListener("wheel", handleWheelDoc, { passive: false });
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener("wheel", handleWheelDoc);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isExpanded, handleWheel]);
+
+  const handleDoubleClick = useCallback(() => {
     setZoomState((prev) => ({
       ...prev,
       scale: prev.scale === 1 ? 2 : 1,
       position: { x: 0, y: 0 },
     }));
-  };
+  }, []);
 
   if (!USE_LOCAL_IMAGES && isLoading) {
-    return <LoadingContainer>Loading images...</LoadingContainer>;
+    return <SkeletonGrid count={8} />;
   }
 
   if (!USE_LOCAL_IMAGES && error) {
-    return <ErrorContainer>Error: {error}</ErrorContainer>;
+    return <ErrorState message={error} onRetry={loadImages} />;
   }
 
   if (images.length === 0) {
-    return <EmptyContainer>No images found</EmptyContainer>;
+    return <EmptyState ctaPath="/upload" ctaLabel="Subir imagen" isSearch={!!search} />;
   }
 
-  console.log("imagenes recomendades",favorites);
-  
   return (
-    <Container className="mt-3">
-      {/* Sección de imágenes recomendadas */}
-      {showRecommendedSection &&
-        recommendedImages.length > 0 &&
-        !search && (
-          <RecommendedSection>
-            <SectionTitle>Quizás te interese</SectionTitle>
-            <GalleryGrid>
-              {recommendedImages.map((img, index) => (
-                <GalleryItem
-                  className="mb-3"
-                  key={`recommended-${img.id}-${index}`}
-                  onClick={() => handleRecommendedShow(img, index)}
-                >
-                  <img
-                    src={img.url || img}
-                    alt={`Imagen recomendada ${index + 1}`}
-                    loading="lazy"
+    <div className="px-3 py-4" style={{ minHeight: "100vh" }}>
+      {!search && showRecommendedSection && recommendedImages.length > 0 && (
+        <section className="mb-5">
+          <SectionTitle className="neon-section-title text-center neon-glow-text fw-semibold mb-4 pb-2">Quizás te interese</SectionTitle>
+          <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+            {recommendedImages.map((img, index) => {
+              const mainIndex = images.findIndex(i => i.image_id === img.image_id);
+              const isFav = mainIndex !== -1
+                ? favorites[mainIndex]
+                : (recommendedLikedStatus[img.image_id] || false);
+              const recRating = mainIndex !== -1
+                ? ratings[mainIndex]
+                : { stars: 0, count: 0 };
+
+              return (
+                <div className="col" key={`recommended-${img.id}-${index}`}>
+                  <GalleryCard
+                    img={img}
+                    index={index}
+                    isFavorite={isFav}
+                    rating={recRating}
+                    onOpen={() => handleRecommendedShow(img, index)}
+                    onToggleFavorite={() => {
+                      if (mainIndex !== -1) {
+                        sendInteraction(img.id, mainIndex);
+                      } else {
+                        sendRecommendedInteraction(img);
+                      }
+                    }}
                   />
-                  <RatingOverlay>
-                    <LeftSection>
-                      <FavoriteIcon
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // Para imágenes recomendadas, necesitamos encontrar su índice en el array principal
-                          const mainIndex = images.findIndex(i => i.image_id === img.image_id);
-                          if (mainIndex !== -1) {
-                            sendInteraction(img.id, "likes", mainIndex);
-                          }
-                        }}
-                      >
-                        {/* Para imágenes recomendadas, necesitamos verificar si están en favoritos */}
-                        {images.some(i => i.image_id === img.image_id && favorites[images.findIndex(img2 => img2.image_id === img.image_id)]) ? (
-                          <FaHeart
-                            style={{ color: "#ff4d6d", fontSize: "1.2rem" }}
-                          />
-                        ) : (
-                          <FaRegHeart
-                            style={{ color: "#fff", fontSize: "1.2rem" }}
-                          />
-                        )}
-                      </FavoriteIcon>
-                    </LeftSection>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
-                    <RightSection>
-                      <StarRatingDisplay>
-                        <FaStar style={{ color: "#ffc107" }} />
-                        <RatingText>
-                          {/* Para imágenes recomendadas, necesitamos obtener su rating */}
-                          {images.some(i => i.image_id === img.image_id) 
-                            ? (ratings[images.findIndex(img2 => img2.image_id === img.image_id)]?.stars?.toFixed(1) || "0.0")
-                            : "0.0"} (
-                          {images.some(i => i.image_id === img.image_id) 
-                            ? (ratings[images.findIndex(img2 => img2.image_id === img.image_id)]?.count || 0)
-                            : 0})
-                        </RatingText>
-                      </StarRatingDisplay>
-                    </RightSection>
-                  </RatingOverlay>
-                </GalleryItem>
-              ))}
-            </GalleryGrid>
-
-            {/* Elemento observador para scroll infinito de recomendaciones */}
-            {recommendedPagination.has_next && (
-              <div
-                ref={recommendedObserverTarget}
-                style={{ minHeight: "50px" }}
-              >
-                {isLoadingMore && (
-                  <LoadingText>
-                    <Spinner />
-                    Cargando más recomendaciones...
-                  </LoadingText>
-                )}
-              </div>
-            )}
-          </RecommendedSection>
-        )}
-
-      {/* Sección de todas las imágenes */}
       {images.length > 0 && (
-        <AllImagesSection>
-          {!search && <SectionTitle>Todas las imágenes</SectionTitle>}
-          <GalleryGrid>
+        <section className="mb-5">
+          {!search && <SectionTitle className="neon-section-title text-center neon-glow-text fw-semibold mb-4 pb-2">Todas las imágenes</SectionTitle>}
+          <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
             {images.map((img, index) => (
-              <GalleryItem
-                className="mb-3"
-                key={`all-${img.id}-${index}`}
-                onClick={() => handleShow(index)}
-              >
-                <img
-                  src={img.url || img}
-                  alt={`Imagen ${index + 1}`}
-                  loading="lazy"
+              <div className="col" key={img.id || img.image_id || index}>
+                <GalleryCard
+                  img={img}
+                  index={index}
+                  isFavorite={favorites[index]}
+                  rating={ratings[index]}
+                  onOpen={handleShow}
+                  onToggleFavorite={sendInteraction}
                 />
-                <RatingOverlay>
-                  <LeftSection>
-                    <FavoriteIcon
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        sendInteraction(img.id, "likes", index);
-                      }}
-                    >
-                      {favorites[index] ? (
-                        <FaHeart
-                          style={{ color: "#ff4d6d", fontSize: "1.2rem" }}
-                        />
-                      ) : (
-                        <FaRegHeart
-                          style={{ color: "#fff", fontSize: "1.2rem" }}
-                        />
-                      )}
-                    </FavoriteIcon>
-                  </LeftSection>
-
-                  <RightSection>
-                    <StarRatingDisplay>
-                      <FaStar style={{ color: "#ffc107" }} />
-                      <RatingText>
-                        {ratings[index]?.stars?.toFixed(1) || "0.0"} (
-                        {ratings[index]?.count || 0})
-                      </RatingText>
-                    </StarRatingDisplay>
-                  </RightSection>
-                </RatingOverlay>
-              </GalleryItem>
+              </div>
             ))}
-          </GalleryGrid>
-
-          {/* Elemento observador para scroll infinito de imágenes normales */}
-          {imagesPagination.has_next && !search && (
-            <div ref={observerTarget} style={{ height: "20px" }}>
-              {isLoadingMore && (
-                <LoadingText>Cargando más imágenes...</LoadingText>
-              )}
-            </div>
-          )}
-        </AllImagesSection>
+          </div>
+        </section>
       )}
 
       <TransparentModal show={show} onHide={handleClose} centered size="xl">
@@ -905,13 +794,12 @@ const handleRecommendedShow = async (img, index) => {
             $showComments={showComments}
             $isExpanded={isExpanded}
           >
-            <CarouselContainer
-              className="modal-carousel"
-              onClick={(e) => e.stopPropagation()}
-              $isExpanded={isExpanded}
-              $showComments={showComments}
-              onMouseLeave={handleMouseUp}
-            >
+              <CarouselContainer
+                className="modal-carousel"
+                onClick={(e) => e.stopPropagation()}
+                $isExpanded={isExpanded}
+                $showComments={showComments}
+              >
               <StyledCarousel
                 activeIndex={selectedImageIndex}
                 onSelect={setSelectedImageIndex}
@@ -919,47 +807,53 @@ const handleRecommendedShow = async (img, index) => {
               >
                 {images.map((img, index) => (
                   <Carousel.Item key={index}>
-                    <ModalControlsContainer>
-                      <ControlsContainer>
-                        <ControlButton onClick={handleExpand}>
+                    <div className="d-flex justify-content-between align-items-center mb-3 position-relative z-3">
+                      <div className="d-flex gap-2">
+                        <button
+                          className="btn btn-dark rounded-circle p-2 d-flex align-items-center justify-content-center"
+                          style={{ width: 36, height: 36 }}
+                          onClick={handleExpand}
+                        >
                           {isExpanded ? <FaCompress /> : <FaExpand />}
-                        </ControlButton>
-                        <ControlButton
+                        </button>
+                        <button
+                          className={`btn rounded-circle p-2 d-flex align-items-center justify-content-center ${showRating ? "btn-light" : "btn-dark"}`}
+                          style={{ width: 36, height: 36 }}
                           onClick={() => setShowRating(!showRating)}
-                          isActive={showRating}
                         >
                           <FaEllipsisH />
-                        </ControlButton>
-                        <ControlButton
+                        </button>
+                        <button
+                          className={`btn rounded-circle p-2 d-flex align-items-center justify-content-center ${showComments ? "btn-light" : "btn-dark"}`}
+                          style={{ width: 36, height: 36 }}
                           onClick={() => setShowComments(!showComments)}
-                          isActive={showComments}
                         >
                           <FaComment />
-                        </ControlButton>
-                        <ControlButton
+                        </button>
+                        <button
+                          className="btn btn-dark rounded-circle p-2 d-flex align-items-center justify-content-center"
+                          style={{ width: 36, height: 36 }}
                           onClick={() => handleDownload(img.url || img, index)}
                         >
                           <FaDownload />
-                        </ControlButton>
-                      </ControlsContainer>
-                      <FavoriteButton
+                        </button>
+                      </div>
+                      <button
+                        className="btn btn-dark rounded-circle p-2 d-flex align-items-center justify-content-center position-absolute"
+                        style={{ right: 0, width: 36, height: 36 }}
                         onClick={(e) => {
                           e.stopPropagation();
                           e.preventDefault();
-                          sendInteraction(img.id, "likes", index);
+                          sendInteraction(img.id, index);
                         }}
                       >
                         {favorites[index] ? (
-                          <FaHeart
-                            style={{ color: "#ff4d6d", fontSize: "1.2rem" }}
-                          />
+                          <FaHeart style={{ color: "#ff4d6d", fontSize: "1.2rem" }} />
                         ) : (
-                          <FaRegHeart
-                            style={{ color: "#fff", fontSize: "1.2rem" }}
-                          />
+                          <FaRegHeart style={{ color: "#fff", fontSize: "1.2rem" }} />
                         )}
-                      </FavoriteButton>
-                    </ModalControlsContainer>
+                      </button>
+                    </div>
 
                     <CarouselImage
                       ref={imageRef}
@@ -979,10 +873,7 @@ const handleRecommendedShow = async (img, index) => {
                             : "zoom-in"
                           : "pointer",
                       }}
-                      onWheel={handleWheel}
                       onMouseDown={handleMouseDown}
-                      onMouseMove={handleMouseMove}
-                      onMouseUp={handleMouseUp}
                       onDoubleClick={handleDoubleClick}
                     />
 
@@ -996,20 +887,20 @@ const handleRecommendedShow = async (img, index) => {
                           {ratings[index]?.stars?.toFixed(1) || "0.0"} (
                           {ratings[index]?.count || 0} ratings)
                         </RatingTextModal>
-                        <ActionButtons>
-                          <ActionButton
-                            onClick={() =>
-                              handleDownload(img.url || img, index)
-                            }
+                        <div className="d-flex gap-2 mt-2">
+                          <button
+                            className="btn btn-outline-light btn-sm d-flex align-items-center gap-1 rounded-pill px-3"
+                            onClick={() => handleDownload(img.url || img, index)}
                           >
-                            <FaDownload /> Descargar
-                          </ActionButton>
-                          <ActionButton
+                            <FaDownload className="me-1" /> Descargar
+                          </button>
+                          <button
+                            className="btn btn-outline-light btn-sm d-flex align-items-center gap-1 rounded-pill px-3"
                             onClick={() => handleShare(img.url || img, index)}
                           >
-                            <FaShareAlt /> Compartir
-                          </ActionButton>
-                        </ActionButtons>
+                            <FaShareAlt className="me-1" /> Compartir
+                          </button>
+                        </div>
                       </ModalRatingContainer>
                     )}
                   </Carousel.Item>
@@ -1022,9 +913,13 @@ const handleRecommendedShow = async (img, index) => {
             <CommentsPanel $showComments={showComments}>
               <CommentsHeader>
                 <h5>Comentarios</h5>
-                <CloseButton onClick={() => setShowComments(false)}>
+                <button
+                  className="btn btn-sm btn-outline-light rounded-circle d-flex align-items-center justify-content-center p-1"
+                  style={{ width: 28, height: 28 }}
+                  onClick={() => setShowComments(false)}
+                >
                   <FaTimes />
-                </CloseButton>
+                </button>
               </CommentsHeader>
 
               <CommentsList>
@@ -1051,37 +946,24 @@ const handleRecommendedShow = async (img, index) => {
                   disabled={isSubmittingComment}
                 />
                 <CommentCharCount>{commentText.length}/500</CommentCharCount>
-                <CommentButton
+                <button
+                  className="btn btn-primary w-100 rounded-3 fw-medium"
                   onClick={handleCommentSubmit}
                   disabled={!commentText.trim() || isSubmittingComment}
                 >
                   {isSubmittingComment ? "Enviando..." : "Comentar"}
-                </CommentButton>
+                </button>
               </CommentForm>
             </CommentsPanel>
           )}
         </ModalBackdrop>
       </TransparentModal>
-    </Container>
+    </div>
   );
 }
 
-const RecommendedSection = styled.div`
-  margin-bottom: 30px;
-`;
-
-const AllImagesSection = styled.div`
-  margin-top: 20px;
-`;
-
 const SectionTitle = styled.h2`
   font-size: 1.5rem;
-  margin-top: 40px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: ${({ theme }) => theme.inputText || theme.text} !important;
-  font-weight: 600;
 `;
 
 const CommentsPanel = styled.div`
@@ -1201,18 +1083,6 @@ const CommentsHeader = styled.div`
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 `;
 
-const CloseButton = styled.button`
-  background: none;
-  border: none;
-  color: white;
-  cursor: pointer;
-  font-size: 1.2rem;
-
-  &:hover {
-    color: #ccc;
-  }
-`;
-
 const CommentsList = styled.div`
   flex: 1;
   overflow-y: auto;
@@ -1280,217 +1150,6 @@ const CommentCharCount = styled.div`
   margin-bottom: 10px;
 `;
 
-const CommentButton = styled.button`
-  width: 100%;
-  background: ${(props) => (props.disabled ? "#555" : "#4267B2")};
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 8px 12px;
-  cursor: ${(props) => (props.disabled ? "not-allowed" : "pointer")};
-
-  &:hover {
-    background: ${(props) => (props.disabled ? "#555" : "#365899")};
-  }
-`;
-
-// Estilos existentes (se mantienen igual)
-const LoadingContainer = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  font-size: 1.5rem;
-`;
-
-const ErrorContainer = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  font-size: 1.5rem;
-  color: red;
-`;
-
-const EmptyContainer = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  font-size: 1.5rem;
-`;
-
-const FavoriteIcon = styled.div`
-  position: absolute;
-  top: 4px;
-  left: 8px;
-  bottom: 8px;
-  cursor: pointer;
-  z-index: 2;
-  background: rgba(0, 0, 0, 0.5);
-  border-radius: 50%;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  &:hover {
-    background: rgba(0, 0, 0, 0.7);
-    transform: scale(1.1);
-  }
-`;
-
-const FavoriteButton = styled.button`
-  position: absolute;
-  right: 15px;
-  background: rgba(0, 0, 0, 0.5);
-  border: none;
-  color: white;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 10;
-  transition: all 0.3s;
-
-  &:hover {
-    background: rgba(0, 0, 0, 0.8);
-    transform: scale(1.1);
-  }
-`;
-
-const ModalControlsContainer = styled.div`
-  margin-bottom: 18px;
-  display: flex;
-  justify-content: space-between;
-  z-index: 10;
-`;
-
-const Container = styled.div`
-  min-height: 100vh;
-`;
-
-const ControlsContainer = styled.div`
-  display: flex;
-  gap: 10px;
-`;
-
-const ControlButton = styled.button`
-  background: rgba(0, 0, 0, 0.5);
-  border: none;
-  color: white;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s;
-
-  &:hover {
-    background: rgba(0, 0, 0, 0.8);
-    transform: scale(1.1);
-  }
-
-  ${({ isActive }) =>
-    isActive &&
-    `
-    background: rgba(255, 255, 255, 0.2);
-    box-shadow: 0 0 0 2px white;
-  `}
-`;
-
-const GalleryGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  grid-auto-rows: minmax(200px, auto);
-  gap: 16px;
-  padding: 16px;
-
-  @media (max-width: 768px) {
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  }
-`;
-
-const GalleryItem = styled.div`
-  position: relative;
-  overflow: hidden;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: transform 0.3s;
-  padding-bottom: 125%;
-
-  img {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  &:hover {
-    transform: scale(1.02);
-  }
-`;
-
-const ActionButtons = styled.div`
-  display: flex;
-  gap: 10px;
-  margin-top: 10px;
-`;
-
-const ActionButton = styled.button`
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  color: white;
-  padding: 5px 10px;
-  border-radius: 5px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  transition: background 0.3s;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.3);
-  }
-`;
-
-const LeftSection = styled.div`
-  display: flex;
-  align-items: center;
-`;
-
-const RightSection = styled.div`
-  display: flex;
-  align-items: center;
-`;
-
-const RatingOverlay = styled.div`
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(0, 0, 0, 0.7);
-  padding: 8px;
-  color: white;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-`;
-
-const StarRatingDisplay = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 4px;
-`;
-
 const RatingText = styled.span`
   font-size: 0.9rem;
   margin-left: 4px;
@@ -1555,99 +1214,4 @@ const StyledCarousel = styled(Carousel)`
   }
 `;
 
-const ViewToggleContainer = styled.div`
-  display: flex;
-  justify-content: center;
-  margin: 20px 0;
-  gap: 10px;
-  padding: 0 16px;
 
-  @media (max-width: 768px) {
-    flex-direction: column;
-    align-items: center;
-  }
-`;
-
-const ViewToggleButton = styled.button`
-  background: ${(props) => (props.active ? "#4267B2" : "rgba(0, 0, 0, 0.1)")};
-  color: ${(props) => (props.active ? "white" : "#333")};
-  border: none;
-  padding: 12px 24px;
-  border-radius: 25px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: all 0.3s ease;
-  min-width: 200px;
-  font-size: 14px;
-
-  &:hover {
-    background: ${(props) =>
-      props.active ? "#365899" : "rgba(0, 0, 0, 0.15)"};
-    transform: translateY(-2px);
-  }
-
-  @media (max-width: 768px) {
-    min-width: 180px;
-    padding: 10px 20px;
-  }
-`;
-
-const LoadingText = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 30px 20px;
-  color: #666;
-  font-size: 16px;
-  gap: 15px;
-`;
-
-const Spinner = styled.div`
-  width: 40px;
-  height: 40px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #4267b2;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-
-  @keyframes spin {
-    0% {
-      transform: rotate(0deg);
-    }
-    100% {
-      transform: rotate(360deg);
-    }
-  }
-`;
-
-const ModalHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px 20px;
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 15;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-`;
-
-const HeaderLeft = styled.div`
-  display: flex;
-  align-items: center;
-`;
-
-const HeaderRight = styled.div`
-  display: flex;
-  align-items: center;
-`;
-
-const ModalTitle = styled.h5`
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 500;
-`;

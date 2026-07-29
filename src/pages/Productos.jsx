@@ -1,11 +1,10 @@
 import { MdHealthAndSafety, MdAssessment } from "react-icons/md";
-import React, { useState, useEffect, useContext } from "react";
-import { Row, Col, Spinner, Button, Card, Accordion } from "react-bootstrap";
-import styled from "styled-components";
+import React, { useState, useEffect } from "react";
+import { Row, Col, Button, Card, Accordion } from "react-bootstrap";
 import axios from "axios";
 import { toast } from "react-toastify";
 import api from "../Auth/Api";
-import { ThemeContext } from "../App";
+import LoadingSpinner from "../components/LoadingSpinner";
 
 // Importar iconos disponibles de react-icons/md
 import {
@@ -33,7 +32,6 @@ export function Productos() {
   const [loadingGraph, setLoadingGraph] = useState(false);
   const [loadingDebug, setLoadingDebug] = useState(false);
   const [loadingEval, setLoadingEval] = useState(false);
-  const { setTheme, theme } = useContext(ThemeContext);
 
   // Obtener usuario actual
   const getCurrentUser = async () => {
@@ -112,11 +110,11 @@ export function Productos() {
 
   const getGraphIconForKey = (key) => {
     const iconMap = {
-      nodes: <MdSchema size={20} className="me-2 text-primary" />,
+      nodes: <MdSchema size={20} className="me-2 text-info" />,
       edges: <MdLink size={20} className="me-2 text-info" />,
-      user_nodes: <MdPeople size={20} className="me-2 text-success" />,
-      image_nodes: <MdImage size={20} className="me-2 text-warning" />,
-      default: <MdInfo size={20} className="me-2 text-muted" />,
+      user_nodes: <MdPeople size={20} className="me-2 text-info" />,
+      image_nodes: <MdImage size={20} className="me-2 text-info" />,
+      default: <MdInfo size={20} className="me-2 text-secondary" />,
     };
 
     return iconMap[key] || iconMap.default;
@@ -138,7 +136,7 @@ export function Productos() {
 
   const formatValue = (key, value) => {
     if (typeof value === 'boolean') {
-      return value ? "Sí" : "No";
+      return value ? "S\u00ed" : "No";
     }
     return value;
   };
@@ -156,54 +154,16 @@ export function Productos() {
     return "";
   };
 
-  // Función para obtener las clases CSS según el tema
-  const getThemeClasses = () => {
-    switch(theme) {
-      case 'dark':
-        return {
-          accordionHeader: 'bg-dark text-light',
-          accordionBody: 'bg-dark text-light',
-          cardHeader: 'bg-dark text-light border-secondary',
-          cardBody: 'bg-dark text-light',
-          textClass: 'text-light',
-          badge: 'bg-secondary',
-          border: 'border-secondary'
-        };
-      case 'light':
-        return {
-          accordionHeader: 'bg-light text-dark',
-          accordionBody: 'bg-white text-dark',
-          cardHeader: 'bg-light text-dark border-light',
-          cardBody: 'bg-white text-dark',
-          textClass: 'text-dark',
-          badge: 'bg-primary',
-          border: 'border-light'
-        };
-      default:
-        return {
-          accordionHeader: 'bg-light text-dark',
-          accordionBody: 'bg-white text-dark',
-          cardHeader: 'bg-light text-dark border-light',
-          cardBody: 'bg-white text-dark',
-          textClass: 'text-dark',
-          badge: 'bg-primary',
-          border: 'border-light'
-        };
-    }
-  };
-
-  const themeClasses = getThemeClasses();
-
   const ListAccordion = ({ title, items, icon }) => (
     <Accordion className="mt-3">
-      <Accordion.Item eventKey="0" className={themeClasses.border}>
-        <Accordion.Header className={themeClasses.accordionHeader}>
-          {icon} <span className={themeClasses.textClass}>{title}</span> ({items.length})
+      <Accordion.Item eventKey="0" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(0,242,254,0.1)' }}>
+        <Accordion.Header style={{ background: 'rgba(0,242,254,0.04)' }}>
+          {icon} <span className="text-light ms-1">{title}</span> ({items.length})
         </Accordion.Header>
-        <Accordion.Body className={themeClasses.accordionBody}>
+        <Accordion.Body style={{ background: 'rgba(255,255,255,0.02)' }}>
           <div className="d-flex flex-wrap">
             {items.map((item, idx) => (
-              <span key={idx} className={`badge me-2 mb-2 ${themeClasses.badge} ${themeClasses.textClass}`}>
+              <span key={idx} className="badge me-2 mb-2 text-light" style={{ background: 'rgba(0,242,254,0.1)', border: '1px solid rgba(0,242,254,0.15)' }}>
                 {item}
               </span>
             ))}
@@ -214,104 +174,95 @@ export function Productos() {
   );
 
   return (
-    <Container className="m-4 m-sm-5">
-      <div>
-        <div className="d-flex align-items-center mt-5 mb-2">
-          <MdHealthAndSafety size={25} className="me-2" />
-          <h3 className="mb-0">Debugging del Sistema</h3>
+    <div className="dashboard-bg text-light" style={{ margin: '-1rem -2rem', padding: '1.5rem 2rem 80px', minHeight: 'calc(100vh - 30px)' }}>
+      <div className="m-4 m-sm-5">
+        <div className="d-flex align-items-center mt-5 mb-2 w-100">
+          <MdHealthAndSafety size={25} className="me-2 text-info" />
+          <h3 className="text-light mb-0 fw-light" style={{ letterSpacing: '1px' }}>Debugging del Sistema</h3>
         </div>
-        <p>
+        <p className="text-secondary" style={{ opacity: 0.7 }}>
           Probar algoritmo y debugging
         </p>
       </div>
-      <hr className="mb-5" />
-      <Row className="gap-sm-5">
+      <hr className="mb-5 mx-4 mx-sm-5" style={{ borderColor: 'rgba(0,242,254,0.12)', opacity: 0.3 }} />
+      <Row className="gap-sm-5 mx-3 mx-sm-5">
         {/* Estadísticas del grafo */}
         <Col
            sm={5} xs={12}
-          className="mb-4"
-          style={{ borderRadius: "15px", border: "2px solid #808080" }}
+          className="mb-4 p-0"
         >
           {!loadingGraph && Object.keys(graphStats).length > 0 ? (
-            <div className={`p-3 rounded shadow-sm ${themeClasses.cardBody}`}>
-              <h5 className={`mb-3 ${themeClasses.textClass}`}>Estadísticas del Grafo</h5>
+            <div className="p-3 rounded shadow-sm" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(0,242,254,0.12)', borderRadius: '12px', backdropFilter: 'blur(8px)' }}>
+              <h5 className="mb-3 text-light">Estad&iacute;sticas del Grafo</h5>
               {Object.entries(graphStats).map(([key, value], index, array) => (
                 <React.Fragment key={index}>
                   <div className="d-flex align-items-center mb-2 p-2">
                     {getGraphIconForKey(key)}
                     <div className="d-flex justify-content-between w-100">
-                      <span className={`fw-medium ${themeClasses.textClass}`}>{formatGraphKeyName(key)}:</span>
-                      <span className={`fw-bold ${themeClasses.textClass}`}>
+                      <span className="fw-medium text-light">{formatGraphKeyName(key)}:</span>
+                      <span className="fw-bold text-light">
                         {value}
                       </span>
                     </div>
                   </div>
-                  {index < array.length - 1 && <hr className="my-2" />}
+                  {index < array.length - 1 && <hr className="my-2" style={{ borderColor: 'rgba(255,255,255,0.06)' }} />}
                 </React.Fragment>
               ))}
             </div>
           ) : (
-            <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '200px' }}>
-              <Spinner animation="border" role="status" className="m-5" />
-            </div>
+            <LoadingSpinner />
           )}
         </Col>
 
         {/* Debug de usuario */}
         <Col
           sm={5} xs={12}
-          style={{ borderRadius: "15px", border: "2px solid #808080" }}
         >
-          <div className={`p-3 rounded shadow-sm ${themeClasses.cardBody}`}>
-            <h5 className={`mb-3 ${themeClasses.textClass}`}>Debug de Usuario</h5>
+          <div className="p-3 rounded shadow-sm" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(0,242,254,0.12)', borderRadius: '12px', backdropFilter: 'blur(8px)' }}>
+            <h5 className="mb-3 text-light">Debug de Usuario</h5>
             
             {currentUser ? (
               <>
-                <div className={`mb-3 ${themeClasses.textClass}`}>
+                <div className="mb-3 text-light">
                   <span className="fw-medium">Usuario actual: </span>
                   <span className="fw-bold">{currentUser.user_id}</span>
                 </div>
                 
                 <div className="d-flex gap-2 mb-3">
                   <Button 
-                    variant="primary" 
+                    variant="outline-info" 
                     onClick={handleDebugUser}
                     disabled={loadingDebug}
                   >
-                    {loadingDebug ? <Spinner animation="border" size="sm" /> : ""}
-                    Debug User
+                    {loadingDebug ? "Cargando..." : <><MdHealthAndSafety className="me-1" /> Debug User</>}
                   </Button>
                   
                   <Button 
-                    variant="success" 
+                    variant="outline-info" 
                     onClick={handleEvaluateUser}
                     disabled={loadingEval}
                   >
-                    {loadingEval ? <Spinner animation="border" size="sm" /> : <MdAssessment className="me-1" />}
-                    Evaluar
+                    {loadingEval ? "Cargando..." : <><MdAssessment className="me-1" /> Evaluar</>}
                   </Button>
                 </div>
               </>
             ) : (
-              <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '50px' }}>
-                <Spinner animation="border" role="status" size="sm" className="me-2" />
-                <span>Cargando información del usuario...</span>
-              </div>
+              <LoadingSpinner label="Cargando información del usuario..." size="sm" inline />
             )}
             
             {userDebug && (
-              <Card className={`mt-3 ${themeClasses.border}`}>
-                <Card.Header className={themeClasses.cardHeader}>
-                  <strong className={themeClasses.textClass}>Información de Debug</strong>
+              <Card className="mt-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(0,242,254,0.12)', backdropFilter: 'blur(8px)' }}>
+                <Card.Header style={{ background: 'rgba(0,242,254,0.05)', borderBottom: '1px solid rgba(0,242,254,0.1)' }}>
+                  <strong className="text-light">Informaci&oacute;n de Debug</strong>
                 </Card.Header>
-                <Card.Body className={themeClasses.cardBody}>
-                  <div className={`d-flex align-items-center mb-2 ${themeClasses.textClass}`}>
+                <Card.Body style={{ background: 'transparent' }}>
+                  <div className="d-flex align-items-center mb-2 text-light">
                     <MdPeople className="me-2 text-primary" />
                     <span className="fw-medium">User ID: </span>
                     <span className="ms-2 fw-bold">{userDebug.user_id}</span>
                   </div>
                   
-                  <div className={`d-flex align-items-center mb-2 ${themeClasses.textClass}`}>
+                  <div className="d-flex align-items-center mb-2 text-light">
                     <MdThumbUp className="me-2 text-success" />
                     <span className="fw-medium">Usuario existe: </span>
                     <span className={`ms-2 fw-bold ${getValueClass('', userDebug.user_exists)}`}>
@@ -319,9 +270,9 @@ export function Productos() {
                     </span>
                   </div>
                   
-                  <div className={`d-flex align-items-center mb-2 ${themeClasses.textClass}`}>
+                  <div className="d-flex align-items-center mb-2 text-light">
                     <MdImage className="me-2 text-info" />
-                    <span className="fw-medium">Total de imágenes likeadas: </span>
+                    <span className="fw-medium">Total de im&aacute;genes likeadas: </span>
                     <span className="ms-2 fw-bold">{userDebug.total_liked_images}</span>
                   </div>
                   
@@ -345,51 +296,31 @@ export function Productos() {
             )}
             
             {userEvaluation && (
-              <Card className={`mt-3 ${themeClasses.border}`}>
-                <Card.Header className={themeClasses.cardHeader}>
-                  <strong className={themeClasses.textClass}>Evaluación del Usuario</strong>
+              <Card className="mt-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(0,242,254,0.12)', backdropFilter: 'blur(8px)' }}>
+                <Card.Header style={{ background: 'rgba(0,242,254,0.05)', borderBottom: '1px solid rgba(0,242,254,0.1)' }}>
+                  <strong className="text-light">Evaluaci&oacute;n del Usuario</strong>
                 </Card.Header>
-                <Card.Body className={themeClasses.cardBody}>
-                  <div className={`d-flex align-items-center mb-2 ${themeClasses.textClass}`}>
+                <Card.Body style={{ background: 'transparent' }}>
+                  <div className="d-flex align-items-center mb-2 text-light">
                     <MdPeople className="me-2 text-primary" />
                     <span className="fw-medium">User ID: </span>
                     <span className="ms-2 fw-bold">{userEvaluation.user_id}</span>
                   </div>
                   
-                  <div className={`d-flex justify-content-between mb-2 ${themeClasses.textClass}`}>
-                    <span className="fw-medium">Precisión:</span>
-                    <span className="fw-bold">{userEvaluation.precision.toFixed(2)}</span>
-                  </div>
-                  
-                  <div className={`d-flex justify-content-between mb-2 ${themeClasses.textClass}`}>
-                    <span className="fw-medium">Recall:</span>
-                    <span className="fw-bold">{userEvaluation.recall.toFixed(2)}</span>
-                  </div>
-                  
-                  <div className={`d-flex justify-content-between mb-2 ${themeClasses.textClass}`}>
-                    <span className="fw-medium">F1 Score:</span>
-                    <span className="fw-bold">{userEvaluation.f1_score.toFixed(2)}</span>
-                  </div>
-                  
-                  <div className={`d-flex justify-content-between mb-2 ${themeClasses.textClass}`}>
-                    <span className="fw-medium">Hits:</span>
-                    <span className="fw-bold">{userEvaluation.hits}</span>
-                  </div>
-                  
-                  <div className={`d-flex justify-content-between mb-2 ${themeClasses.textClass}`}>
-                    <span className="fw-medium">Total recomendaciones:</span>
-                    <span className="fw-bold">{userEvaluation.total_recommendations}</span>
-                  </div>
-                  
-                  <div className={`d-flex justify-content-between mb-2 ${themeClasses.textClass}`}>
-                    <span className="fw-medium">Total positivos:</span>
-                    <span className="fw-bold">{userEvaluation.total_positives}</span>
-                  </div>
-                  
-                  <div className={`d-flex justify-content-between mb-2 ${themeClasses.textClass}`}>
-                    <span className="fw-medium">Fuente de datos:</span>
-                    <span className="fw-bold">{userEvaluation.data_source}</span>
-                  </div>
+                  {[
+                    { label: 'Precisión', value: userEvaluation.precision.toFixed(2) },
+                    { label: 'Recall', value: userEvaluation.recall.toFixed(2) },
+                    { label: 'F1 Score', value: userEvaluation.f1_score.toFixed(2) },
+                    { label: 'Hits', value: userEvaluation.hits },
+                    { label: 'Total recomendaciones', value: userEvaluation.total_recommendations },
+                    { label: 'Total positivos', value: userEvaluation.total_positives },
+                    { label: 'Fuente de datos', value: userEvaluation.data_source },
+                  ].map((item, i) => (
+                    <div key={i} className="d-flex justify-content-between mb-2 text-light">
+                      <span className="fw-medium">{item.label}:</span>
+                      <span className="fw-bold">{item.value}</span>
+                    </div>
+                  ))}
                   
                   {userEvaluation.recommendations && userEvaluation.recommendations.length > 0 && (
                     <ListAccordion 
@@ -412,11 +343,6 @@ export function Productos() {
           </div>
         </Col>
       </Row>
-    </Container>
+    </div>
   );
 }
-
-const Container = styled.div`
-  height: 100%;
-  padding-bottom: 2rem;
-`;

@@ -1,28 +1,26 @@
-import React, {  useContext,useState, useEffect } from "react";
+import React, { useContext, useState, useEffect, useRef } from "react";
 import styled from "styled-components";
 import { Form, Button } from "react-bootstrap";
 import { IoIosArrowDown, IoMdCheckmarkCircle } from "react-icons/io";
+import { FaBell, FaTimes } from "react-icons/fa";
 import profile from "../images/bird_cockatiel.jpg";
 import NavDropdown from "react-bootstrap/NavDropdown";
 import api from "../Auth/Api";
 import { toast } from "react-toastify";
 import { useAuth } from "../Auth/Auth";
-import { useSearch } from "../App";
+import { useSearch, ThemeContext } from "../App";
 import { MdOutlineSearch } from "react-icons/md";
-import { ThemeContext } from "../App";
 
 export function Header() {
-   const { setTheme, theme } = useContext(ThemeContext);
-  const [show, setShow] = useState(true);
+  const { setTheme, theme } = useContext(ThemeContext);
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [user, setUsers] = useState("");
   const { setSearch } = useSearch();
   const [darkMode, setDarkMode] = useState(false);
   const { close } = useAuth();
+  const mobileInputRef = useRef(null);
 
-  
-  const handleLogout = () => {
-    close();
-  };
+  const handleLogout = () => close();
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
@@ -30,27 +28,21 @@ export function Header() {
   };
 
   const getUsers = async () => {
-    try {
-      const response = await api.get("/api/users");
-      setUsers(response.data);
-    } catch (err) {
-      setError(err.response?.data?.detail || "Error al obtener usuarios");
-      throw err;
-    } finally {
-    }
+    const response = await api.get("/api/users");
+    setUsers(response.data);
   };
 
   useEffect(() => {
     getUsers();
   }, []);
 
-useEffect(() => {
-  if (user?.theme) {
-    setTheme("dark");
-  } else {
-    setTheme("light");
-  }
-}, [user]);
+  useEffect(() => {
+    if (user?.theme) {
+      setTheme("dark");
+    } else {
+      setTheme("light");
+    }
+  }, [user]);
 
   const changeTheme = async () => {
     try {
@@ -58,161 +50,247 @@ useEffect(() => {
       getUsers();
     } catch (error) {
       toast.error("No se pudo cambiar el tema");
-    }finally{
     }
   };
 
+  useEffect(() => {
+    if (showMobileSearch && mobileInputRef.current) {
+      mobileInputRef.current.focus();
+    }
+  }, [showMobileSearch]);
+
+  const isDark = theme === "dark";
+  const headerBg = isDark ? "rgba(15,15,15,0.85)" : "rgba(255,255,255,0.85)";
+  const borderColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)";
+
   return (
-    <HeaderContainer className="d-flex justify-content-between align-items-center gap-3">
-      <div className="row align-items-center w-100">
-        <div className="col-sm-9 gap-3">
-          <div className="d-flex align-items-center ms-sm-5">
-            <div className="d-sm-none d-inline me-3">Logo</div>
-            <div className="d-none d-sm-flex align-items-center flex-grow-1">
-              <ThemeFormControl
+    <HeaderWrapper
+      className="navbar border-bottom fixed-top"
+      style={{
+        backdropFilter: "blur(10px)",
+        zIndex: 100,
+        marginLeft: "60px",
+        backgroundColor: headerBg,
+        borderColor: borderColor,
+      }}
+    >
+      {/* DESKTOP SEARCH BAR */}
+      <DesktopRow className="d-none d-md-flex justify-content-between align-items-center w-100 px-3">
+          <div className="d-flex align-items-center">
+            <img src="/horizontal_logo.png" alt="Logo" style={{ height: '40px', width: 'auto', maxWidth: '260px', objectFit: 'contain' }} />
+          </div>
+
+        <div className="d-flex align-items-center flex-grow-1 justify-content-center mx-4" style={{ maxWidth: "500px" }}>
+          <div className="position-relative w-100">
+            <SearchIcon isDark={isDark}>
+              <MdOutlineSearch />
+            </SearchIcon>
+            <StyledInput
+              isDark={isDark}
+              type="text"
+              placeholder="Buscar..."
+              onChange={(e) => setSearch(e.target.value)}
+              className="rounded-pill"
+              style={{ paddingLeft: "2.5rem", height: "40px" }}
+            />
+          </div>
+        </div>
+
+        <div className="d-flex align-items-center gap-2">
+          <IconBtn isDark={isDark}>
+            <FaBell style={{ fontSize: "1.2rem", cursor: "pointer" }} />
+          </IconBtn>
+          <NavDropdown
+            title={
+              <div className="d-flex align-items-center gap-1">
+                <img
+                  src={profile}
+                  alt="Profile"
+                  className="rounded-circle"
+                  style={{ width: "34px", height: "34px", objectFit: "cover" }}
+                />
+                <IconBtn isDark={isDark}>
+                  <IoIosArrowDown />
+                </IconBtn>
+              </div>
+            }
+            align="end"
+            menuVariant={isDark ? "dark" : "light"}
+          >
+            <NavDropdown.Item href="/Config">
+              <div className="d-flex align-items-center gap-3">
+                <img
+                  src={profile}
+                  alt="Profile"
+                  className="rounded-circle"
+                  style={{ width: "68px", height: "68px", objectFit: "cover" }}
+                />
+                <div className="d-flex flex-column">
+                  <span className="fw-semibold">Personal</span>
+                  <span className="text-muted small">{user?.username}</span>
+                  <span className="text-muted small">{user?.email}</span>
+                </div>
+                <IoMdCheckmarkCircle size={20} color="#9fef00" />
+              </div>
+              <hr />
+            </NavDropdown.Item>
+            <NavDropdown.Item href="/config">Configuraci&oacute;n</NavDropdown.Item>
+            <NavDropdown.Item onClick={toggleDarkMode} className="d-flex align-items-center justify-content-between">
+              Cambiar tema
+              <Button variant={darkMode ? "dark" : "light"} size="sm">
+                {darkMode ? "\u{1F319}" : "\u{2600}\u{FE0F}"}
+              </Button>
+            </NavDropdown.Item>
+            <hr />
+            <NavDropdown.Item onClick={handleLogout}>Cerrar sesi&oacute;n</NavDropdown.Item>
+          </NavDropdown>
+        </div>
+      </DesktopRow>
+
+      {/* MOBILE SEARCH BAR */}
+      <MobileRow className="d-flex d-md-none justify-content-between align-items-center w-100 px-2">
+        {!showMobileSearch ? (
+          <>
+            <div className="d-flex align-items-center" style={{ minWidth: 0 }}>
+              <img src="/horizontal_logo.png" alt="Logo" style={{ width: '100%', height: 'auto', maxWidth: '160px', objectFit: 'contain', flexShrink: 0 }} />
+            </div>
+            <div className="d-flex align-items-center gap-2">
+              <IconBtn isDark={isDark}>
+                <MdOutlineSearch
+                  style={{ fontSize: "1.4rem", cursor: "pointer" }}
+                  onClick={() => setShowMobileSearch(true)}
+                />
+              </IconBtn>
+              <IconBtn isDark={isDark}>
+                <FaBell style={{ fontSize: "1.15rem", cursor: "pointer" }} />
+              </IconBtn>
+              <NavDropdown
+                title={
+                  <img
+                    src={profile}
+                    alt="Profile"
+                    className="rounded-circle"
+                    style={{ width: "30px", height: "30px", objectFit: "cover" }}
+                  />
+                }
+                align="end"
+                menuVariant={isDark ? "dark" : "light"}
+              >
+                <NavDropdown.Item href="/Config">
+                  <div className="d-flex align-items-center gap-3">
+                    <img
+                      src={profile}
+                      alt="Profile"
+                      className="rounded-circle"
+                      style={{ width: "68px", height: "68px", objectFit: "cover" }}
+                    />
+                    <div className="d-flex flex-column">
+                      <span className="fw-semibold">Personal</span>
+                      <span className="text-muted small">{user?.username}</span>
+                      <span className="text-muted small">{user?.email}</span>
+                    </div>
+                    <IoMdCheckmarkCircle size={20} color="#9fef00" />
+                  </div>
+                  <hr />
+                </NavDropdown.Item>
+                <NavDropdown.Item href="/config">Configuraci&oacute;n</NavDropdown.Item>
+                <NavDropdown.Item onClick={toggleDarkMode} className="d-flex align-items-center justify-content-between">
+                  Cambiar tema
+                  <Button variant={darkMode ? "dark" : "light"} size="sm">
+                    {darkMode ? "\u{1F319}" : "\u{2600}\u{FE0F}"}
+                  </Button>
+                </NavDropdown.Item>
+                <hr />
+                <NavDropdown.Item onClick={handleLogout}>Cerrar sesi&oacute;n</NavDropdown.Item>
+              </NavDropdown>
+            </div>
+          </>
+        ) : (
+          <div className="d-flex align-items-center w-100 gap-2">
+            <div className="position-relative flex-grow-1">
+              <SearchIcon isDark={isDark}>
+                <MdOutlineSearch />
+              </SearchIcon>
+              <StyledInput
+                ref={mobileInputRef}
+                isDark={isDark}
                 type="text"
                 placeholder="Buscar..."
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-100"
-                style={{ minWidth: "200px" }}
+                className="rounded-pill"
+                style={{ paddingLeft: "2.3rem", height: "36px", width: "100%" }}
               />
             </div>
-
-            {/* CONTENEDOR MOBILE */}
-            <div className="d-flex d-sm-none align-items-center gap-2">
-              {/* Barra mobile - Condicional */}
-              {show && (
-                <div className="d-flex align-items-center me-2">
-                  <ThemeFormControl
-                    type="text"
-                    placeholder="Buscar..."
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="me-4"
-                    style={{ minWidth: "90px" }}
-                  />
-                </div>
-              )}
-
-              {/* Ícono de búsqueda mobile */}
-              <MdOutlineSearch
-                className="cursor-pointer position-absolute"
-                style={{
-                  right: "25%",
-                  top: "50%",
-                  transform: "translateY(-50%)",
+            <IconBtn isDark={isDark}>
+              <FaTimes
+                style={{ fontSize: "1.15rem", cursor: "pointer" }}
+                onClick={() => {
+                  setShowMobileSearch(false);
+                  setSearch("");
                 }}
-                onClick={() => setShow((prev) => !prev)}
-                size={30}
               />
-            </div>
+            </IconBtn>
           </div>
-        </div>
-      </div>
-      <div className="d-flex flex-row align-items-center">
-        <NavDropdown
-          title={
-            <div className="d-flex align-items-center">
-              <img
-                src={profile}
-                alt="Profile"
-                className="rounded-circle me-2"
-                style={{ width: "48px", height: "48px" }}
-              />
-              <IoIosArrowDown />
-            </div>
-          }
-          align="end"
-          menuVariant="dark"
-          className="custom-dropdown"
-        >
-          <NavDropdown.Item href="/Config">
-            <div className="d-flex flex-row align-items-center gap-3">
-              <img
-                src={profile}
-                alt="Profile"
-                className="rounded-circle me-2"
-                style={{ width: "68px", height: "68px" }}
-              />
-              <div className="d-flex flex-column">
-                <span>Personal</span>
-                <span>{user?.username}</span>
-                <span>{user?.email}</span>
-              </div>
-              <div>
-                <IoMdCheckmarkCircle size={20} color="#9fef00" />
-              </div>
-            </div>
-            <hr />
-          </NavDropdown.Item>
-          <NavDropdown.Item href="/config">Configuración</NavDropdown.Item>
-          <NavDropdown.Item   onClick={toggleDarkMode} className="d-flex flex-row align-items-center justify-content-between">
-            Cambiar tema{" "}
-            <div style={{ width: "30px", height: "30px" }}>
-              <Button
-                variant={darkMode ? "dark" : "ligth"}
-                size="sm"
-                data-tooltip-id="change-theme"
-                data-tooltip-content="Cambiar tema"
-              >
-                {darkMode ? "🌙" : "☀️"}
-              </Button>
-            </div>
-          </NavDropdown.Item>
-          <hr className="ms-3 me-3" />
-          <NavDropdown.Item onClick={handleLogout}>
-            Cerrar sesión
-          </NavDropdown.Item>
-        </NavDropdown>
-      </div>
-    </HeaderContainer>
+        )}
+      </MobileRow>
+    </HeaderWrapper>
   );
 }
 
-const HeaderContainer = styled.header`
-  background: ${(props) => props.theme.bg};
-  color: ${(props) => props.theme.text};
-  padding: 1rem;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 60px;
-  z-index: 100;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
-  margin-left: 60px;
-  border-radius: 5px;
+const HeaderWrapper = styled.nav`
+  backdrop-filter: blur(10px);
+  padding-top: 0.5rem !important;
+  padding-bottom: 0.5rem !important;
+  min-height: 56px;
 
-  @media (max-width: 768px) {
-    margin-left: 0px;
+  @media (max-width: 576px) {
+    margin-left: 0 !important;
   }
 `;
 
-const ThemeFormControl = styled(Form.Control)`
-  background-color: ${({ theme }) => theme.inputBg || theme.bg} !important;
-  color: ${({ theme }) => theme.inputText || theme.text} !important;
-  border-color: ${({ theme }) => theme.inputBorder || theme.border} !important;
+const DesktopRow = styled.div``;
 
-  &:focus {
-    background-color: ${({ theme }) => theme.inputBg || theme.bg} !important;
-    color: ${({ theme }) => theme.inputText || theme.text} !important;
-    border-color: ${({ theme }) => theme.primary} !important;
-    box-shadow: 0 0 0 0.2rem
-      ${({ theme }) => theme.focusShadow || "rgba(0,123,255,.25)"} !important;
+const MobileRow = styled.div``;
+
+const TitleSpan = styled.span`
+  font-weight: bold;
+  color: ${({ isDark }) => (isDark ? "#fff" : "#202020")};
+`;
+
+const IconBtn = styled.span`
+  color: ${({ isDark }) => (isDark ? "#aaa" : "#555")};
+  transition: color 0.2s;
+  display: inline-flex;
+  align-items: center;
+  &:hover {
+    color: ${({ isDark }) => (isDark ? "#fff" : "#000")};
   }
+`;
 
-  /* Placeholder adaptativo */
+const SearchIcon = styled.div`
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 5;
+  color: ${({ isDark }) => (isDark ? "#888" : "#777")};
+  font-size: 1.1rem;
+  pointer-events: none;
+`;
+
+const StyledInput = styled(Form.Control)`
+  background-color: ${({ isDark }) => (isDark ? "rgb(40,40,40)" : "rgb(245,245,245)")} !important;
+  color: ${({ isDark }) => (isDark ? "#e0e0e0" : "#202020")} !important;
+  border: 1px solid ${({ isDark }) => (isDark ? "rgb(60,60,60)" : "rgb(220,220,220)")} !important;
+  &:focus {
+    background-color: ${({ isDark }) => (isDark ? "rgb(40,40,40)" : "#fff")} !important;
+    color: ${({ isDark }) => (isDark ? "#e0e0e0" : "#202020")} !important;
+    border-color: ${({ isDark }) => (isDark ? "#555" : "#7250FF")} !important;
+    box-shadow: 0 0 0 0.2rem ${({ isDark }) => (isDark ? "rgba(255,255,255,.1)" : "rgba(114,80,255,.25)")} !important;
+  }
   &::placeholder {
-    color: #6c757d !important; /* Default light mode */
+    color: ${({ isDark }) => (isDark ? "#888" : "#999")} !important;
     opacity: 1;
   }
-
-  .dark-mode &::placeholder {
-    color: #fff !important; /* Dark mode */
-  }
-
-  .light-mode &::placeholder {
-    color: #6c757d !important; /* Light mode */
-  }
+  transition: none;
 `;

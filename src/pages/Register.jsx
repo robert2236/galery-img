@@ -166,7 +166,8 @@ export const Register = () => {
           <div style={{ position: "relative", zIndex: 2, padding: "1.5rem" }}>
             <Form onSubmit={handleSubmit(registerUser)}>
               <div className="p-2">
-                <div className="d-flex justify-content-center align-items-center mb-4">
+                <div className="text-center mb-4">
+                  <img src="/logo.png" alt="Logo" style={{ height: '64px', width: '64px', objectFit: 'contain', display: 'block', margin: '0 auto 12px', background: 'transparent' }} />
                   <h2 style={{
                     fontWeight: "700",
                     fontSize: isMobile ? "1.8rem" : "2.2rem",
