@@ -1,8 +1,7 @@
 import styled from "styled-components";
-import logo from "../assets/react.svg";
+import logo from "/picpreference.png";
 import { v } from "../styles/Variables";
 import {
-  AiOutlineHome,
   AiOutlineApartment,
   AiOutlineSetting,
 } from "react-icons/ai";
@@ -11,7 +10,7 @@ import { NavLink } from "react-router-dom";
 import { useContext, useEffect, useState} from "react";
 import { ThemeContext } from "../App";
 import { useAuth } from "../Auth/Auth";
-import { FaCloudUploadAlt } from "react-icons/fa";
+import { FaCloudUploadAlt, FaImages } from "react-icons/fa";
 import api from "../Auth/Api";
 import { VscDebugAlt } from "react-icons/vsc";
 
@@ -48,8 +47,8 @@ export function Sidebar() {
   const linksArray = [
     {
       label: "Home",
-      icon: <AiOutlineHome />,
-      to: "/home",
+      icon: <FaImages />,
+      to: "/my-gallery",
     },
     {
       label: "Upload",
@@ -90,9 +89,9 @@ export function Sidebar() {
     <Container className="d-none d-sm-inline" themeUse={theme}>
       <SidebarContent>
         <div className="Logocontent">
-          <div className="imgcontent">
+          <NavLink to="/home" className="imgcontent">
             <img src={logo} alt="Logo" />
-          </div>
+          </NavLink>
         </div>
 
         {linksArray.map(({ icon, label, to }) => (
@@ -162,17 +161,7 @@ const SidebarContent = styled.div`
   flex-direction: column;
   align-items: center;
   padding-top: 20px;
-  overflow-y: auto;
-
-  /* Estilo de scroll personalizado */
-  &::-webkit-scrollbar {
-    width: 4px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: ${(props) => props.theme.bg3};
-    border-radius: 4px;
-  }
+  overflow: hidden;
 
   .Logocontent {
     display: flex;
@@ -187,8 +176,8 @@ const SidebarContent = styled.div`
       width: 100%;
 
       img {
-        width: 40px;
-        height: 40px;
+        width: 80px;
+        height: 60px;
         cursor: pointer;
       }
     }

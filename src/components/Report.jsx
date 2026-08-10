@@ -1,20 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import ReactMarkdown from 'react-markdown';
 import styled from 'styled-components';
 import api from "../Auth/Api";
+import { ThemeContext } from "../App";
 
 const ReportContainer = styled.div`
   font-family: 'Arial', sans-serif;
   max-width: 800px;
   margin: 0 auto;
   padding: 20px;
-  background: white;
+  background: ${({ isDark }) => isDark ? '#1a1d27' : 'white'};
+  color: ${({ isDark }) => isDark ? '#e0e0e0' : '#212529'};
   
-  h1 { color: #2c3e50; }
-  h2 { color: #34495e; border-bottom: 2px solid #eee; }
-  h3 { color: #7f8c8d; }
+  h1 { color: ${({ isDark }) => isDark ? '#e0e0e0' : '#2c3e50'}; }
+  h2 { color: ${({ isDark }) => isDark ? '#ccc' : '#34495e'}; border-bottom: 2px solid ${({ isDark }) => isDark ? '#444' : '#eee'}; }
+  h3 { color: ${({ isDark }) => isDark ? '#aaa' : '#7f8c8d'}; }
   
   table {
     border-collapse: collapse;
@@ -23,17 +25,17 @@ const ReportContainer = styled.div`
   }
   
   th {
-    background-color: #f8f9fa;
-    color: #2c3e50;
+    background-color: ${({ isDark }) => isDark ? '#2a2d35' : '#f8f9fa'};
+    color: ${({ isDark }) => isDark ? '#e0e0e0' : '#2c3e50'};
     font-weight: bold;
     padding: 10px;
     text-align: left;
-    border: 1px solid #dee2e6;
+    border: 1px solid ${({ isDark }) => isDark ? '#444' : '#dee2e6'};
   }
   
   td {
     padding: 10px;
-    border: 1px solid #dee2e6;
+    border: 1px solid ${({ isDark }) => isDark ? '#444' : '#dee2e6'};
   }
   
   .score-good { color: #27ae60; font-weight: bold; }
@@ -41,16 +43,16 @@ const ReportContainer = styled.div`
   .score-poor { color: #e74c3c; font-weight: bold; }
   
   .recommendation {
-    background-color: #f8f9fa;
+    background-color: ${({ isDark }) => isDark ? '#2a2d35' : '#f8f9fa'};
     padding: 15px;
     border-left: 4px solid #3498db;
     margin: 15px 0;
   }
   
   .alert {
-    background-color: #fff3cd;
-    border: 1px solid #ffeaa7;
-    color: #856404;
+    background-color: ${({ isDark }) => isDark ? '#3a3520' : '#fff3cd'};
+    border: 1px solid ${({ isDark }) => isDark ? '#5a5030' : '#ffeaa7'};
+    color: ${({ isDark }) => isDark ? '#ffd93d' : '#856404'};
     padding: 15px;
     border-radius: 5px;
     margin: 15px 0;
@@ -58,9 +60,11 @@ const ReportContainer = styled.div`
 `;
 
 const ExportReportComponent = () => {
+  const { theme } = useContext(ThemeContext);
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const isDark = theme === "dark";
 
   const fetchReport = async () => {
     setLoading(true);
@@ -220,6 +224,11 @@ const ExportReportComponent = () => {
           </>
         )}
       </div>
+      <ReportContainer isDark={isDark} id="report-content">
+        {report && report.report && (
+          <ReactMarkdown>{report.report}</ReactMarkdown>
+        )}
+      </ReportContainer>
     </div>
   );
 };

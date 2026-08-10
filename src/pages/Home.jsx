@@ -7,10 +7,12 @@ import {
   FaHeart,
   FaRegHeart,
   FaComment,
+  FaBookmark,
+  FaRegBookmark,
 } from "react-icons/fa";
 import { FaDownload, FaShareAlt } from "react-icons/fa";
 import { toast } from "react-toastify";
-import { FaExpand, FaEllipsisH, FaCompress, FaTimes } from "react-icons/fa";
+import { FaExpand, FaEllipsisH, FaCompress, FaTimes, FaImages } from "react-icons/fa";
 import axios from "axios";
 import api from "../Auth/Api";
 import { useSearch } from "../App";
@@ -20,6 +22,8 @@ import SkeletonGrid from "../components/SkeletonGrid";
 import LoadingSpinner from "../components/LoadingSpinner";
 import EmptyState from "../components/EmptyState";
 import ErrorState from "../components/ErrorState";
+import SimilarImagesPanel from "../components/SimilarImagesPanel";
+import { searchSimilarImages } from "../services/vectorSearch";
 
 const USE_LOCAL_IMAGES = false; 
 
@@ -56,6 +60,7 @@ export function Home() {
   const [error, setError] = useState(null);
   const [ratings, setRatings] = useState([]);
   const [favorites, setFavorites] = useState([]);
+  const [qualifications, setQualifications] = useState([]);
   const [show, setShow] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [showRating, setShowRating] = useState(false);
@@ -69,6 +74,11 @@ export function Home() {
   const [recommendedImages, setRecommendedImages] = useState([]);
   const { search } = useSearch();
   const [recommendedLikedStatus, setRecommendedLikedStatus] = useState({});
+  const [similarImages, setSimilarImages] = useState([]);
+  const [embeddingStatus, setEmbeddingStatus] = useState("ok"); // "ok" | "warning" | "migrating"
+  const [showSimilar, setShowSimilar] = useState(false);
+  const [loadingSimilar, setLoadingSimilar] = useState(false);
+  const [savedMap, setSavedMap] = useState({});
 
 // Agrega esta función después de getCurrentUser()
 const handleRecommendedShow = async (img, index) => {
@@ -77,7 +87,7 @@ const handleRecommendedShow = async (img, index) => {
   
   if (mainIndex !== -1) {
     // Si está en las imágenes principales, usa ese índice
-    handleShow(mainIndex);
+    handleShow(null, mainIndex);
   } else {
     // Si NO está en las principales, agrega la imagen recomendada al array principal
     // temporalmente para mostrarla en el modal
@@ -152,6 +162,39 @@ const handleRecommendedShow = async (img, index) => {
     } catch (error) {
       console.error("Error al obtener el usuario actual:", error);
       return null;
+    }
+  };
+
+  const fetchSavedStatus = async (userId) => {
+    try {
+      const response = await api.get(`/api/images/user/${userId}`);
+      const savedIds = {};
+      response.data.saved_images?.forEach((img) => {
+        savedIds[img.image_id] = true;
+      });
+      setSavedMap(savedIds);
+    } catch (err) {
+      console.error("Error fetching saved status:", err);
+    }
+  };
+
+  const handleToggleSave = async (imageId) => {
+    try {
+      if (savedMap[imageId]) {
+        await api.delete(`/api/images/${imageId}/save`);
+        setSavedMap((prev) => {
+          const next = { ...prev };
+          delete next[imageId];
+          return next;
+        });
+        toast.info("Imagen removida de tu galería");
+      } else {
+        await api.put(`/api/images/${imageId}/save`);
+        setSavedMap((prev) => ({ ...prev, [imageId]: true }));
+        toast.success("Imagen guardada en tu galería");
+      }
+    } catch (err) {
+      toast.error("Error al guardar imagen");
     }
   };
 
@@ -249,6 +292,8 @@ const handleRecommendedShow = async (img, index) => {
           comments: (img.comments || []).map((comment) => ({
             id: comment.comment_id,
             userId: comment.user_id,
+            userName: comment.username || String(comment.user_id),
+            userImage: comment.user_image || "/static/user.png",
             text: comment.comment,
             createdAt: comment.created_at,
             parentCommentId: comment.parent_comment_id,
@@ -264,6 +309,12 @@ const handleRecommendedShow = async (img, index) => {
 
       setImages(allImages);
       setRatings(Array(allImages.length).fill({ stars: 0, count: 0 }));
+
+      const qualPromises = allImages.map(img =>
+        api.get(`/api/images/${img.image_id}/qualification`).then(r => r.data).catch(() => null)
+      );
+      const qualResults = await Promise.all(qualPromises);
+      setQualifications(qualResults);
 
       const userData = await getCurrentUser();
       const initialFavorites = allImages.map(
@@ -344,6 +395,21 @@ const handleRecommendedShow = async (img, index) => {
     }
   };
 
+  const loadSimilarImages = async (imageId) => {
+    setLoadingSimilar(true);
+    try {
+      const data = await searchSimilarImages(imageId, 8);
+      setSimilarImages(data.similar_images || []);
+      setEmbeddingStatus(data.status === "warning" ? (data.needs_migration ? "migrating" : "warning") : "ok");
+    } catch (error) {
+      console.error("Error cargando imágenes similares:", error);
+      setSimilarImages([]);
+      setEmbeddingStatus("warning");
+    } finally {
+      setLoadingSimilar(false);
+    }
+  };
+
   // Cargar datos iniciales
   const initializeData = async () => {
     if (USE_LOCAL_IMAGES) {
@@ -355,6 +421,7 @@ const handleRecommendedShow = async (img, index) => {
       );
       setImages(localImages);
       setRatings(Array(localImages.length).fill({ stars: 0, count: 0 }));
+      setQualifications(Array(localImages.length).fill(null));
       setFavorites(Array(localImages.length).fill(false));
     } else {
       await loadImages();
@@ -369,7 +436,13 @@ const handleRecommendedShow = async (img, index) => {
 
   // Cargar usuario al iniciar
   useEffect(() => {
-    getCurrentUser();
+    const initUser = async () => {
+      const userData = await getCurrentUser();
+      if (userData?.user_id) {
+        fetchSavedStatus(userData.user_id);
+      }
+    };
+    initUser();
   }, []);
 
   // Enviar evento de vista cuando se abre el modal
@@ -475,6 +548,8 @@ const handleRecommendedShow = async (img, index) => {
       const newComment = {
         id: response.data.comment_id,
         userId: currentUser.user_id,
+        userName: currentUser.username,
+        userImage: currentUser.image,
         text: commentText.trim(),
         createdAt: new Date().toISOString(),
         parentCommentId: null,
@@ -498,8 +573,6 @@ const handleRecommendedShow = async (img, index) => {
         ...prev,
         [imageId]: [...(prev[imageId] || []), newComment],
       }));
-
-      toast.success("Comentario enviado correctamente");
     } catch (error) {
       console.error("Error al enviar comentario:", error);
       if (error.response?.status === 400) {
@@ -728,7 +801,7 @@ const handleRecommendedShow = async (img, index) => {
       {!search && showRecommendedSection && recommendedImages.length > 0 && (
         <section className="mb-5">
           <SectionTitle className="neon-section-title text-center neon-glow-text fw-semibold mb-4 pb-2">Quizás te interese</SectionTitle>
-          <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+          <MasonryGrid>
             {recommendedImages.map((img, index) => {
               const mainIndex = images.findIndex(i => i.image_id === img.image_id);
               const isFav = mainIndex !== -1
@@ -737,6 +810,9 @@ const handleRecommendedShow = async (img, index) => {
               const recRating = mainIndex !== -1
                 ? ratings[mainIndex]
                 : { stars: 0, count: 0 };
+              const recQualification = mainIndex !== -1
+                ? qualifications[mainIndex]
+                : null;
 
               return (
                 <div className="col" key={`recommended-${img.id}-${index}`}>
@@ -744,7 +820,9 @@ const handleRecommendedShow = async (img, index) => {
                     img={img}
                     index={index}
                     isFavorite={isFav}
+                    isSaved={savedMap[img.image_id]}
                     rating={recRating}
+                    qualification={recQualification}
                     onOpen={() => handleRecommendedShow(img, index)}
                     onToggleFavorite={() => {
                       if (mainIndex !== -1) {
@@ -753,31 +831,35 @@ const handleRecommendedShow = async (img, index) => {
                         sendRecommendedInteraction(img);
                       }
                     }}
+                    onToggleSave={handleToggleSave}
                   />
                 </div>
               );
             })}
-          </div>
+          </MasonryGrid>
         </section>
       )}
 
       {images.length > 0 && (
         <section className="mb-5">
           {!search && <SectionTitle className="neon-section-title text-center neon-glow-text fw-semibold mb-4 pb-2">Todas las imágenes</SectionTitle>}
-          <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+          <MasonryGrid>
             {images.map((img, index) => (
-              <div className="col" key={img.id || img.image_id || index}>
+              <div key={img.id || img.image_id || index}>
                 <GalleryCard
                   img={img}
                   index={index}
                   isFavorite={favorites[index]}
+                  isSaved={savedMap[img.image_id]}
                   rating={ratings[index]}
+                  qualification={qualifications[index]}
                   onOpen={handleShow}
                   onToggleFavorite={sendInteraction}
+                  onToggleSave={handleToggleSave}
                 />
               </div>
             ))}
-          </div>
+          </MasonryGrid>
         </section>
       )}
 
@@ -837,6 +919,18 @@ const handleRecommendedShow = async (img, index) => {
                         >
                           <FaDownload />
                         </button>
+                        <button
+                          className={`btn rounded-circle p-2 d-flex align-items-center justify-content-center ${showSimilar ? "btn-light" : "btn-dark"}`}
+                          style={{ width: 36, height: 36 }}
+                          onClick={() => {
+                            setShowSimilar(!showSimilar);
+                            if (!showSimilar) {
+                              loadSimilarImages(img.image_id);
+                            }
+                          }}
+                        >
+                          <FaImages />
+                        </button>
                       </div>
                       <button
                         className="btn btn-dark rounded-circle p-2 d-flex align-items-center justify-content-center position-absolute"
@@ -851,6 +945,21 @@ const handleRecommendedShow = async (img, index) => {
                           <FaHeart style={{ color: "#ff4d6d", fontSize: "1.2rem" }} />
                         ) : (
                           <FaRegHeart style={{ color: "#fff", fontSize: "1.2rem" }} />
+                        )}
+                      </button>
+                      <button
+                        className="btn btn-dark rounded-circle p-2 d-flex align-items-center justify-content-center position-absolute"
+                        style={{ right: 44, width: 36, height: 36 }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          handleToggleSave(img.image_id);
+                        }}
+                      >
+                        {savedMap[img.image_id] ? (
+                          <FaBookmark style={{ color: "#00f2fe", fontSize: "1.1rem" }} />
+                        ) : (
+                          <FaRegBookmark style={{ color: "#fff", fontSize: "1.1rem" }} />
                         )}
                       </button>
                     </div>
@@ -879,6 +988,15 @@ const handleRecommendedShow = async (img, index) => {
 
                     {showRating && (
                       <ModalRatingContainer>
+                        <div className="d-flex align-items-center gap-2 mb-2">
+                          <FaStar style={{ color: "#ffc107", fontSize: "1.5rem" }} />
+                          <span style={{ fontSize: "1.2rem", fontWeight: "bold" }}>
+                            {qualifications[index]?.qualification || 0}/5
+                          </span>
+                          <small className="text-muted">
+                            ({qualifications[index]?.likes || 0} likes / {qualifications[index]?.views || 0} views)
+                          </small>
+                        </div>
                         <StarRating
                           rating={ratings[index]?.stars || 0}
                           onRate={(rating) => handleRating(index, rating)}
@@ -926,7 +1044,16 @@ const handleRecommendedShow = async (img, index) => {
                 {images[selectedImageIndex]?.comments?.length > 0 ? (
                   images[selectedImageIndex].comments.map((comment) => (
                     <CommentItem key={comment.id}>
-                      <CommentAuthor>{comment.userId}</CommentAuthor>
+                      <div className="d-flex align-items-center gap-2 mb-1">
+                        <a href={`/user/${comment.userId}`} onClick={(e) => e.stopPropagation()}>
+                          <img
+                            src={comment.userImage || "/static/user.png"}
+                            alt=""
+                            style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover", cursor: "pointer" }}
+                          />
+                        </a>
+                        <CommentAuthor>{comment.userName}</CommentAuthor>
+                      </div>
                       <CommentText>{comment.text}</CommentText>
                       <CommentDate>
                         {new Date(comment.createdAt).toLocaleDateString()}
@@ -956,6 +1083,28 @@ const handleRecommendedShow = async (img, index) => {
               </CommentForm>
             </CommentsPanel>
           )}
+          {showSimilar && (
+            <SimilarImagesPanel
+              imageId={images[selectedImageIndex]?.image_id}
+              similarImages={similarImages}
+              loading={loadingSimilar}
+              onClose={() => setShowSimilar(false)}
+              embeddingStatus={embeddingStatus}
+              onImageSelect={(img) => {
+                const mainIndex = images.findIndex(
+                  (i) => i.image_id === img.image_id
+                );
+                if (mainIndex !== -1) {
+                  setSelectedImageIndex(mainIndex);
+                } else {
+                  setImages((prev) => [...prev, img]);
+                  setRatings((prev) => [...prev, { stars: 0, count: 0 }]);
+                  setFavorites((prev) => [...prev, false]);
+                  setSelectedImageIndex(images.length);
+                }
+              }}
+            />
+          )}
         </ModalBackdrop>
       </TransparentModal>
     </div>
@@ -964,6 +1113,23 @@ const handleRecommendedShow = async (img, index) => {
 
 const SectionTitle = styled.h2`
   font-size: 1.5rem;
+`;
+
+const MasonryGrid = styled.div`
+  columns: 4;
+  column-gap: 1rem;
+
+  @media (max-width: 992px) {
+    columns: 3;
+  }
+  @media (max-width: 768px) {
+    columns: 2;
+  }
+
+  & > div {
+    break-inside: avoid;
+    margin-bottom: 1rem;
+  }
 `;
 
 const CommentsPanel = styled.div`
@@ -1097,7 +1263,6 @@ const CommentItem = styled.div`
 const CommentAuthor = styled.div`
   font-weight: bold;
   font-size: 0.9rem;
-  margin-bottom: 5px;
 `;
 
 const CommentText = styled.p`

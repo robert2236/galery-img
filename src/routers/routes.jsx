@@ -6,6 +6,8 @@ import { Diagramas } from "../pages/Diagramas";
 import { Reportes } from "../pages/Reportes";
 import { Login } from "../pages/Login";
 import { Config } from "../pages/Config";
+import { MyGallery } from "../pages/MyGallery";
+import { PublicGallery } from "../pages/PublicGallery";
 
 import { useAuth } from "../Auth/Auth";
 import { useNavigate, Navigate } from "react-router-dom";
@@ -23,6 +25,7 @@ export function MyRoutes() {
       {/* Ruta pública */}
       <Route path="/" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/user/:user_id" element={<PublicGallery />} />
 
       {/* Rutas privadas */}
       <Route
@@ -74,6 +77,14 @@ export function MyRoutes() {
         element={
           <PrivateRoute>
             <Config />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/my-gallery"
+        element={
+          <PrivateRoute>
+            <MyGallery />
           </PrivateRoute>
         }
       />

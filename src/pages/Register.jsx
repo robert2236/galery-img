@@ -391,8 +391,8 @@ export const Register = () => {
                       fontWeight: "600",
                       fontSize: isMobile ? "1rem" : "1.1rem",
                       border: "none",
-                      background: loading 
-                        ? (darkMode ? "#555" : "#ccc")
+                      background: loading
+                        ? (darkMode ? "#444" : "#ccc")
                         : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                       color: "white",
                       transition: "all 0.3s ease",

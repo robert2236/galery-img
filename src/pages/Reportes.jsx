@@ -581,7 +581,7 @@ const transformScatterTimeSeriesToPlotly = (scatterData) => {
           showarrow: false,
           font: {
             size: 12,
-            color: '#666'
+            color: '#aaa'
           }
         }
       ] : [],
@@ -699,7 +699,7 @@ const transformPieChartToPlotly = (pieData) => {
           showarrow: false,
           font: {
             size: 12,
-            color: '#666'
+            color: '#aaa'
           }
         }
       ] : []
@@ -925,7 +925,7 @@ const transformTreemapToPlotly = (treemapData) => {
           showarrow: false,
           font: {
             size: 12,
-            color: '#666'
+            color: '#aaa'
           }
         }
       ] : [],
@@ -1067,7 +1067,7 @@ const transformBubbleChartToPlotly = (bubbleData) => {
           xref: 'paper',
           yref: 'paper',
           showarrow: false,
-          font: { size: 10, color: '#666' }
+          font: { size: 10, color: '#aaa' }
         }
       ]
     };
@@ -1824,7 +1824,7 @@ const BackendPlotlyChart = ({ chartData, title, height = 500 }) => {
           padding: '20px'
         }}
       >
-        <div className="text-center" style={{ color: '#888' }}>
+        <div className="text-center" style={{ color: '#aaa' }}>
           {error ? error : 'Cargando gráfica...'}
         </div>
       </div>

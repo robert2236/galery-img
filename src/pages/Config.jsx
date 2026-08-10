@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Row, Col, Form, Button } from "react-bootstrap";
 import { FaCog } from "react-icons/fa";
-import profile from "../images/bird_cockatiel.jpg";
 import styled from "styled-components";
 import { useForm } from "react-hook-form";
 import api from "../Auth/Api";
@@ -12,6 +11,10 @@ export const Config = () => {
   const [user, setUsers] = useState("");
   const [loading, setLoading] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [profilePicFile, setProfilePicFile] = useState(null);
+  const [uploadingProfilePic, setUploadingProfilePic] = useState(false);
+  const [profilePublic, setProfilePublic] = useState(true);
+  const profilePicInputRef = useRef(null);
 
   const {
     register,
@@ -51,6 +54,7 @@ export const Config = () => {
       setValue("username", user.username || "");
       setValue("email", user.email || "");
       setValue("web", user.web || "");
+      setProfilePublic(user.profile_public !== false);
     }
   }, [user, setValue]);
 
@@ -62,6 +66,42 @@ export const Config = () => {
       toast.error("Hubo un error al actualizar");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleProfilePicUpload = async () => {
+    if (!profilePicFile) {
+      toast.warning("Selecciona una imagen");
+      return;
+    }
+    
+    setUploadingProfilePic(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", profilePicFile);
+      
+      await api.post("/api/users/profile-picture", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      
+      toast.success("Foto de perfil actualizada");
+      setProfilePicFile(null);
+      getUsers();
+    } catch (error) {
+      toast.error("Error al subir la imagen");
+    } finally {
+      setUploadingProfilePic(false);
+    }
+  };
+
+  const handleToggleVisibility = async () => {
+    try {
+      const newValue = !profilePublic;
+      await api.put(`/api/users/profile-visibility?profile_public=${newValue}`);
+      setProfilePublic(newValue);
+      toast.success(newValue ? "Perfil ahora es público" : "Perfil ahora es privado");
+    } catch (error) {
+      toast.error("Error al cambiar visibilidad");
     }
   };
 
@@ -82,21 +122,48 @@ export const Config = () => {
       <Row>
         <Col
           xs={12}
-          lg={7}
           className="p-sm-5 p-4 mb-3 d-flex  justify-content-center
-           gap-lg-5"
+      "
           style={{ borderRadius: "15px", border: "2px solid #808080" }}
         >
           <form onSubmit={handleSubmit(configuration)}>
             <div className="d-flex flex-row mb-3 justify-content-between align-items-center">
-              <div className="d-flex flex-column ">
+              <div className="d-flex flex-column">
                 <span>Foto de perfil</span>
-                <img
-                  src={user?.image}
-                  alt="Profile"
-                  className="rounded-circle me-2"
-                  style={{ width: "68px", height: "68px" }}
+                <div className="position-relative">
+                  <img
+                    src={profilePicFile ? URL.createObjectURL(profilePicFile) : (user?.image || "/static/user.png")}
+                    alt="Profile"
+                    className="rounded-circle me-2"
+                    style={{ width: "68px", height: "68px", objectFit: "cover" }}
+                  />
+                </div>
+                <input
+                  type="file"
+                  ref={profilePicInputRef}
+                  onChange={(e) => setProfilePicFile(e.target.files[0])}
+                  style={{ display: "none" }}
+                  accept="image/jpeg,image/png,image/gif,image/webp"
                 />
+                <div className="d-flex gap-2 mt-2">
+                  <Button
+                    variant="outline-secondary"
+                    size="sm"
+                    onClick={() => profilePicInputRef.current?.click()}
+                  >
+                    Seleccionar
+                  </Button>
+                  {profilePicFile && (
+                    <Button
+                      variant="success"
+                      size="sm"
+                      onClick={handleProfilePicUpload}
+                      disabled={uploadingProfilePic}
+                    >
+                      {uploadingProfilePic ? "Subiendo..." : "Guardar"}
+                    </Button>
+                  )}
+                </div>
               </div>
               <div style={{width:"30px", height:"30px"}}>
                 <Button
@@ -104,13 +171,27 @@ export const Config = () => {
                   onClick={toggleDarkMode}
                   size="sm"
                   data-tooltip-id="change-theme"
-                data-tooltip-content="Cambiar tema"
-               
+                  data-tooltip-content="Cambiar tema"
                 >
                   {darkMode ? "☀️" : "🌙"}
                 </Button>
               </div>
               <Tooltip id="change-theme" />
+            </div>
+            <div className="d-flex align-items-center justify-content-between mb-3 p-3 rounded" style={{ background: "rgba(0,242,254,0.05)", border: "1px solid rgba(0,242,254,0.15)" }}>
+              <div>
+                <div className="fw-semibold">Perfil público</div>
+                <small className="text-muted">
+                  {profilePublic ? "Cualquiera puede ver tu galería" : "Solo tú puedes ver tu galería"}
+                </small>
+              </div>
+              <Form.Check
+                type="switch"
+                id="profile-public-switch"
+                checked={profilePublic}
+                onChange={handleToggleVisibility}
+                style={{ cursor: "pointer" }}
+              />
             </div>
             <Row>
               <Col xs={12} lg={6}>
@@ -172,12 +253,6 @@ export const Config = () => {
               <b>Guardar cambios</b>
             </Button>
           </form>
-        </Col>
-        <Col xs={12} lg={5}>
-          Lorem ipsum dolor sit amet consectetur adipisicing elit. Officiis
-          doloribus rem possimus odit. Alias voluptatum consequatur magni enim
-          quidem deserunt nostrum dolore repellat est tempore, perspiciatis
-          natus, dolorum illum asperiores.
         </Col>
       </Row>
     </Container>

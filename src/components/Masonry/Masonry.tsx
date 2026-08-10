@@ -101,7 +101,7 @@ function Masonry() {
   if (width === 0) {
     return (
       <div ref={ref} style={{ width: '100%', height: '600px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: '#888', fontSize: '1.1rem' }}>Cargando galería...</div>
+        <div style={{ color: '#aaa', fontSize: '1.1rem' }}>Cargando galería...</div>
       </div>
     )
   }

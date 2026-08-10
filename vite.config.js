@@ -16,5 +16,11 @@ export default defineConfig({
     modules: {
       localsConvention: 'camelCase'
     }
+  },
+  server: {
+    proxy: {
+      '/uploads': 'http://localhost:8000',
+      '/static': 'http://localhost:8000',
+    }
   }
 })
