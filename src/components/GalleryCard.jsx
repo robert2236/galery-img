@@ -1,6 +1,7 @@
 import React, { memo } from "react";
 import styled from "styled-components";
 import { FaStar, FaRegStar, FaHeart, FaRegHeart, FaBookmark, FaRegBookmark } from "react-icons/fa";
+import { imgSrc } from "../utils/imgSrc";
 
 const GalleryCard = memo(({
   img,
@@ -22,7 +23,7 @@ const GalleryCard = memo(({
     >
       <ImageContainer className="position-relative overflow-hidden d-flex align-items-center justify-content-center">
         <CardImage
-          src={img.url || img}
+          src={imgSrc(img.url || img)}
           alt=""
           loading="lazy"
           className="card-img-neon position-absolute top-0 start-0 w-100 h-100"

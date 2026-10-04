@@ -104,6 +104,10 @@ export function Diagramas() {
       images_with_interactions: "Imágenes con interacciones",
       feature_coverage: "Cobertura de características",
       interaction_coverage: "Cobertura de interacciones",
+      vector_index_ready: "Índice vectorial",
+      indexed_images: "Imágenes indexadas",
+      graph_nodes: "Nodos del grafo",
+      graph_edges: "Aristas del grafo",
     };
 
     return (

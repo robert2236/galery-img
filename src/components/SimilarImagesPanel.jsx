@@ -8,6 +8,7 @@
 import React from "react";
 import styled from "styled-components";
 import { FaTimes, FaImage, FaExclamationTriangle } from "react-icons/fa";
+import { imgSrc } from "../utils/imgSrc";
 
 const SimilarImagesPanel = ({
   imageId,
@@ -37,7 +38,7 @@ const SimilarImagesPanel = ({
               onClick={() => onImageSelect(img)}
             >
               <SimilarImage
-                src={img.image_url}
+                src={imgSrc(img.image_url)}
                 alt={img.title || "Imagen similar"}
                 loading="lazy"
               />

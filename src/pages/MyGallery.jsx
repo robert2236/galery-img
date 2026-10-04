@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from "react";
-import { Row, Col, Button, Modal, Form } from "react-bootstrap";
-import { FaImages, FaBookmark, FaUpload, FaCog } from "react-icons/fa";
+import { Row, Col } from "react-bootstrap";
+import { useNavigate } from "react-router-dom";
+import { FaImages, FaBookmark } from "react-icons/fa";
 import { toast } from "react-toastify";
 import styled from "styled-components";
 import api from "../Auth/Api";
@@ -9,14 +10,10 @@ import GalleryCard from "../components/GalleryCard";
 
 export const MyGallery = () => {
   const { theme } = useContext(ThemeContext);
+  const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [savedImages, setSavedImages] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showUploadModal, setShowUploadModal] = useState(false);
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [uploadTitle, setUploadTitle] = useState("");
-  const [uploadCategory, setUploadCategory] = useState("");
-  const [uploading, setUploading] = useState(false);
 
   const isDark = theme === "dark";
 
@@ -52,30 +49,6 @@ export const MyGallery = () => {
     loadData();
   }, []);
 
-  const handleOpenModal = (imageId) => {
-    setSelectedImage(imageId);
-    setShowUploadModal(true);
-  };
-
-  const handleSaveImage = async () => {
-    if (!selectedImage) return;
-    
-    setUploading(true);
-    try {
-      await api.put(`/api/images/${selectedImage}/save`);
-      toast.success("Imagen guardada en tu galería");
-      setShowUploadModal(false);
-      setSelectedImage(null);
-      if (user?.user_id) {
-        await fetchSavedImages(user.user_id);
-      }
-    } catch (error) {
-      toast.error("Error al guardar la imagen");
-    } finally {
-      setUploading(false);
-    }
-  };
-
   const handleUnsave = async (imageId) => {
     try {
       await api.delete(`/api/images/${imageId}/save`);
@@ -85,39 +58,6 @@ export const MyGallery = () => {
       }
     } catch (error) {
       toast.error("Error al remover la imagen");
-    }
-  };
-
-  const handleUploadNew = async () => {
-    if (!uploadTitle.trim()) {
-      toast.warning("Ingresa un título para la imagen");
-      return;
-    }
-
-    setUploading(true);
-    try {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const base64 = e.target.result;
-        await api.post("/api/create_image", {
-          title: uploadTitle,
-          category: uploadCategory || "general",
-          image_url: base64,
-          user_id: user?.user_id,
-        });
-        toast.success("Imagen subida exitosamente");
-        setShowUploadModal(false);
-        setUploadTitle("");
-        setUploadCategory("");
-        if (user?.user_id) {
-          await fetchSavedImages(user.user_id);
-        }
-      };
-      reader.readAsDataURL(selectedImage);
-    } catch (error) {
-      toast.error("Error al subir la imagen");
-    } finally {
-      setUploading(false);
     }
   };
 
@@ -204,7 +144,7 @@ export const MyGallery = () => {
                 isSaved={true}
                 rating={{}}
                 qualification={image}
-                onOpen={(id) => handleOpenModal(id)}
+                onOpen={(id) => navigate(`/image/${id}`)}
                 onToggleFavorite={() => {}}
                 onToggleSave={(imageId) => handleUnsave(imageId)}
               />
@@ -213,64 +153,6 @@ export const MyGallery = () => {
         )}
       </GallerySection>
 
-      {/* Save Image Modal */}
-      <Modal
-        show={showUploadModal}
-        onHide={() => {
-          setShowUploadModal(false);
-          setSelectedImage(null);
-          setUploadTitle("");
-          setUploadCategory("");
-        }}
-        centered
-      >
-        <Modal.Header closeButton>
-          <Modal.Title>
-            <FaBookmark className="me-2" />
-            Guardar imagen
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form.Group className="mb-3">
-            <Form.Label>Título</Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="Título de la imagen"
-              value={uploadTitle}
-              onChange={(e) => setUploadTitle(e.target.value)}
-            />
-          </Form.Group>
-          <Form.Group className="mb-3">
-            <Form.Label>Categoría</Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="Categoría"
-              value={uploadCategory}
-              onChange={(e) => setUploadCategory(e.target.value)}
-            />
-          </Form.Group>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setShowUploadModal(false);
-              setSelectedImage(null);
-              setUploadTitle("");
-              setUploadCategory("");
-            }}
-          >
-            Cancelar
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleSaveImage}
-            disabled={uploading || !selectedImage}
-          >
-            {uploading ? "Guardando..." : "Guardar"}
-          </Button>
-        </Modal.Footer>
-      </Modal>
     </Container>
   );
 };

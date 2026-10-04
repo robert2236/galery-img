@@ -8,6 +8,7 @@ import { Login } from "../pages/Login";
 import { Config } from "../pages/Config";
 import { MyGallery } from "../pages/MyGallery";
 import { PublicGallery } from "../pages/PublicGallery";
+import { ImageDetail } from "../pages/ImageDetail";
 
 import { useAuth } from "../Auth/Auth";
 import { useNavigate, Navigate } from "react-router-dom";
@@ -85,6 +86,14 @@ export function MyRoutes() {
         element={
           <PrivateRoute>
             <MyGallery />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/image/:image_id"
+        element={
+          <PrivateRoute>
+            <ImageDetail />
           </PrivateRoute>
         }
       />

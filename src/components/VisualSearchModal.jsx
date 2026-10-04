@@ -11,6 +11,7 @@ import { Modal } from "react-bootstrap";
 import { FaSearch, FaTimes, FaImage, FaSpinner, FaExclamationTriangle } from "react-icons/fa";
 import api from "../Auth/Api";
 import { searchSimilarImages } from "../services/vectorSearch";
+import { imgSrc } from "../utils/imgSrc";
 
 const VisualSearchModal = ({ show, onHide }) => {
   const [images, setImages] = useState([]);
@@ -118,7 +119,7 @@ const VisualSearchModal = ({ show, onHide }) => {
             {selectedImage && (
               <SelectedPreview>
                 <PreviewImage
-                  src={selectedImage.image_url}
+                  src={imgSrc(selectedImage.image_url)}
                   alt={selectedImage.title}
                 />
                 <PreviewInfo>
@@ -153,7 +154,7 @@ const VisualSearchModal = ({ show, onHide }) => {
                     $isSelected={selectedImage?.image_id === img.image_id}
                     onClick={() => handleImageSelect(img)}
                   >
-                    <CardImage src={img.image_url} alt={img.title} loading="lazy" />
+                    <CardImage src={imgSrc(img.image_url)} alt={img.title} loading="lazy" />
                     <CardOverlay>
                       <CardTitle>{img.title || "Sin título"}</CardTitle>
                     </CardOverlay>
@@ -198,7 +199,7 @@ const VisualSearchModal = ({ show, onHide }) => {
               <ResultsGrid>
                 {results.similar_images.map((img) => (
                   <ResultCard key={img.image_id}>
-                    <ResultImage src={img.image_url} alt={img.title} />
+                    <ResultImage src={imgSrc(img.image_url)} alt={img.title} />
                     <ResultOverlay>
                       <ResultScore>
                         {Math.round((img.similarity_score || 0) * 100)}% similar

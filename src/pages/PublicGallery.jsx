@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Row, Col } from "react-bootstrap";
 import { FaImages, FaLock, FaExternalLinkAlt } from "react-icons/fa";
 import { toast } from "react-toastify";
@@ -10,6 +10,7 @@ import GalleryCard from "../components/GalleryCard";
 
 export const PublicGallery = () => {
   const { user_id } = useParams();
+  const navigate = useNavigate();
   const { theme } = useContext(ThemeContext);
   const [profile, setProfile] = useState(null);
   const [savedImages, setSavedImages] = useState([]);
@@ -151,7 +152,7 @@ export const PublicGallery = () => {
                 isFavorite={false}
                 rating={{}}
                 qualification={image}
-                onOpen={() => {}}
+                onOpen={(id) => navigate(`/image/${id}`)}
                 onToggleFavorite={() => {}}
               />
             ))}
